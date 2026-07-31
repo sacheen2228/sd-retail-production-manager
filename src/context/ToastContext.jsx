@@ -15,10 +15,13 @@ export function ToastProvider({ children }) {
   }, [])
 
   const push = useCallback(
-    (message, tone = 'info') => {
+    (message, tone = 'info', opts = {}) => {
       const id = ++seed
-      setToasts((t) => [...t, { id, message, tone }])
-      timers.current[id] = setTimeout(() => dismiss(id), tone === 'danger' ? 6000 : 3500)
+      const toast = { id, message, tone, ...opts }
+      setToasts((t) => [...t, toast])
+      if (!opts.undo) {
+        timers.current[id] = setTimeout(() => dismiss(id), tone === 'danger' ? 6000 : 3500)
+      }
     },
     [dismiss]
   )
@@ -28,8 +31,13 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toast-stack" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.tone}`} onClick={() => dismiss(t.id)}>
-            {t.message}
+          <div key={t.id} className={`toast toast-${t.tone} ${t.undo ? 'toast-undo' : ''}`} onClick={() => !t.undo && dismiss(t.id)}>
+            <span>{t.message}</span>
+            {t.undo && (
+              <button className="toast-undo-btn" onClick={(e) => { e.stopPropagation(); t.onUndo(); dismiss(t.id) }}>
+                Undo
+              </button>
+            )}
           </div>
         ))}
       </div>

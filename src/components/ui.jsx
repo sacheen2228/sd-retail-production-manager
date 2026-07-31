@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { fmtMoney, fmtDate, daysFromToday, subsFor } from '../lib.js'
 
 export function SubCatField({ value, category, onChange }) {
@@ -148,8 +148,75 @@ export function Btn({ children, tone = 'primary', className = '', ...props }) {
   )
 }
 
-export function Empty({ children }) {
-  return <div className="empty">{children}</div>
+export function Empty({ children, action }) {
+  return (
+    <div className="empty">
+      {children}
+      {action}
+    </div>
+  )
+}
+
+export function GuidedEmpty({ title, description, actionLabel, onAction, icon }) {
+  return (
+    <div className="guided-empty">
+      {icon && <div className="ge-icon">{icon}</div>}
+      <h3>{title}</h3>
+      <p>{description}</p>
+      {actionLabel && onAction && (
+        <Btn onClick={onAction} style={{ marginTop: 12 }}>
+          {actionLabel}
+        </Btn>
+      )}
+    </div>
+  )
+}
+
+export function ColumnPicker({ columns, visible, onToggle, title = 'Columns' }) {
+  return (
+    <div className="col-picker">
+      <button className="col-picker-btn" onClick={() => setOpen(!open)}>
+        <span>☰</span> {title} <span className="cp-count">({visible.filter(Boolean).length}/{columns.length})</span>
+      </button>
+      {open && (
+        <div className="col-picker-menu">
+          {columns.map((c, i) => (
+            <label key={c.key} className="cp-item">
+              <input type="checkbox" checked={visible[i]} onChange={() => onToggle(i)} />
+              <span>{c.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ColumnPickerInner({ columns, visible, onToggle, title = 'Columns' }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="col-picker">
+      <button className="col-picker-btn" onClick={() => setOpen(!open)}>
+        <span>☰</span> {title} <span className="cp-count">({visible.filter(Boolean).length}/{columns.length})</span>
+      </button>
+      {open && (
+        <div className="col-picker-menu">
+          {columns.map((c, i) => (
+            <label key={c.key} className="cp-item">
+              <input type="checkbox" checked={visible[i]} onChange={() => onToggle(i)} />
+              <span>{c.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function useColumnPicker(columns) {
+  const [visible, setVisible] = useState(() => columns.map(() => true))
+  const toggle = useCallback((i) => setVisible((v) => v.map((val, idx) => idx === i ? !val : val)), [])
+  return { visible, toggle, ColumnPicker: () => <ColumnPickerInner columns={columns} visible={visible} onToggle={toggle} /> }
 }
 
 export function Kpi({ label, value, sub, tone = '' }) {
