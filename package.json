@@ -1,9 +1,9 @@
 {
-  "name": "atelier-production-manager",
+  "name": "sd-retail-production-manager",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Production & Merchandising Management System for a luxury ethnic wear / bridal couture atelier",
+  "description": "Production & Merchandising Management System for SD Retail",
   "scripts": {
     "dev": "vite",
     "dev:server": "node server/index.js",

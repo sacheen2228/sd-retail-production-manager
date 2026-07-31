@@ -1,6 +1,6 @@
-# Atelier Production & Merchandising Manager
+# SD Retail Production & Merchandising Manager
 
-A production and merchandising management system for a **luxury ethnic wear / bridal couture atelier**. It digitises the complete workflow described in the Senior Production & Merchandising Manager role — from retailer purchase orders and style-wise job cards to the daily work-in-progress tracker, delivery deadlines and WIP reports.
+A production and merchandising management system for **SD Retail**. It digitises the complete workflow from retailer purchase orders and style-wise job cards to the daily work-in-progress tracker, delivery deadlines and WIP reports.
 
 ## Features
 
