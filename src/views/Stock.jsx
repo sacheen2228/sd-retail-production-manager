@@ -32,7 +32,7 @@ function statusFor(r) {
   return { tone: 'success', label: 'In Stock' }
 }
 
-const COL_COUNT = 15
+const COL_COUNT = 16
 
 export default function Stock({ ctx }) {
   const { db, refresh, can } = ctx
@@ -78,17 +78,13 @@ export default function Stock({ ctx }) {
     return map
   }, [db.styles])
 
-  function runRate(styleCode, onHand) {
-    const s = soldByStyle[String(styleCode || '').trim().toLowerCase()] || { sold: 0, first: null }
-    let dos = null
-    let perDay = 0
-    if (s.first && s.sold > 0) {
-      const days = Math.max(1, Math.round((Date.now() - new Date(s.first + 'T00:00:00').getTime()) / 86400000))
-      perDay = s.sold / days
-      dos = Math.round((Number(onHand) || 0) / perDay)
-    }
-    const sellThru = s.sold + (Number(onHand) || 0) > 0 ? Math.round((s.sold / (s.sold + (Number(onHand) || 0))) * 100) : 0
-    return { sold: s.sold, sellThru, dos }
+  function ledger(r) {
+    const closing = Number(r.quantity) || 0
+    const cost = Number(r.costPrice) || 0
+    const issued = soldByStyle[String(r.styleCode || '').trim().toLowerCase()]?.sold || 0
+    const received = Number(r.receivedStock) || 0
+    const opening = Math.max(0, closing + issued - received)
+    return { opening, received, issued, closing, cost, value: closing * cost }
   }
 
   const list = useMemo(() => {
@@ -152,6 +148,7 @@ export default function Stock({ ctx }) {
     const body = {
       ...editing,
       quantity: Number(editing.quantity) || 0,
+      receivedStock: Number(editing.receivedStock) || 0,
       costPrice: Number(editing.costPrice) || 0,
       sellingPrice: Number(editing.sellingPrice) || 0,
       lowStockLevel: Number(editing.lowStockLevel) || 0
@@ -181,7 +178,10 @@ export default function Stock({ ctx }) {
     const add = Number(addQty.qty)
     if (!add || add <= 0) return
     api
-      .put('/api/readyStock/' + addQty.item.id, { quantity: (Number(addQty.item.quantity) || 0) + add })
+      .put('/api/readyStock/' + addQty.item.id, {
+        quantity: (Number(addQty.item.quantity) || 0) + add,
+        receivedStock: (Number(addQty.item.receivedStock) || 0) + add
+      })
       .then(() => {
         setAddQty(null)
         refresh()
@@ -189,14 +189,11 @@ export default function Stock({ ctx }) {
   }
 
   const exportData = useMemo(() => {
-    const cols = ['Sr No', 'Item', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Qty on Hand', 'Cost', 'Selling', 'Value', 'Sold', 'Sell-thru %', 'Days of Stock', 'Status', 'Location']
+    const cols = ['Sr', 'SKU Code', 'Item Name', 'Category', 'Color', 'Size', 'Warehouse', 'Opening', 'Received', 'Issued', 'Closing', 'Min', 'Cost', 'Value', 'Status']
     const rows = list.map((r, i) => {
       const st = statusFor(r)
-      const rr = runRate(r.styleCode, r.quantity)
-      return [
-        i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, r.quantity, r.costPrice, r.sellingPrice,
-        (Number(r.costPrice) || 0) * (Number(r.quantity) || 0), rr.sold, rr.sellThru ? rr.sellThru + '%' : '-', rr.dos == null ? '-' : rr.dos, st.label, r.location
-      ]
+      const l = ledger(r)
+      return [i + 1, r.styleCode || '', r.name, r.category, r.color || '', r.size || '', r.location, l.opening, l.received, l.issued, l.closing, r.lowStockLevel, l.cost, l.value, st.label]
     })
     return { cols, rows }
   }, [list, soldByStyle])
@@ -368,19 +365,20 @@ export default function Stock({ ctx }) {
           <table className="table">
             <thead>
               <tr>
-                <th>Sr No</th>
-                <th>Item</th>
-                <th>Style Code</th>
+                <th>Sr</th>
+                <th>SKU Code</th>
+                <th>Item Name</th>
+                <th>Category</th>
                 <th>Color</th>
                 <th>Size</th>
-                <th>Category</th>
-                <th>Sub-category</th>
-                <th>Qty on Hand</th>
+                <th>Warehouse</th>
+                <th>Opening</th>
+                <th>Received</th>
+                <th>Issued</th>
+                <th>Closing</th>
+                <th>Min</th>
                 <th>Cost</th>
-                <th>Selling</th>
                 <th>Value</th>
-                <th>Sold</th>
-                <th>Days of Stock</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -388,10 +386,18 @@ export default function Stock({ ctx }) {
             <tbody>
               {groupMode
                 ? groups.map((g) => {
-                    const totalQty = g.reduce((s, v) => s + (Number(v.quantity) || 0), 0)
-                    const sold = g.reduce((s, v) => s + runRate(v.styleCode, v.quantity).sold, 0)
-                    const total = sold + totalQty
-                    const sellThru = total > 0 ? Math.round((sold / total) * 100) : 0
+                    const sum = g.reduce(
+                      (a, v) => {
+                        const l = ledger(v)
+                        a.opening += l.opening
+                        a.received += l.received
+                        a.issued += l.issued
+                        a.closing += l.closing
+                        a.value += l.value
+                        return a
+                      },
+                      { opening: 0, received: 0, issued: 0, closing: 0, value: 0 }
+                    )
                     return (
                       <React.Fragment key={g[0].id}>
                         <tr className="group-row">
@@ -401,29 +407,30 @@ export default function Stock({ ctx }) {
                               <span className="group-name">{g[0].name}</span>
                               <span className="badge badge-default">{g.length} variant{g.length > 1 ? 's' : ''}</span>
                               <span className="group-stats">
-                                {totalQty} pcs · {sold} sold · {sellThru}% sell-thru
+                                Opening {sum.opening} · Received {sum.received} · Issued {sum.issued} · Closing {sum.closing} · {fmtMoney(sum.value)}
                               </span>
                             </div>
                           </td>
                         </tr>
                         {g.map((v, vi) => {
                           const st = statusFor(v)
-                          const rr = runRate(v.styleCode, v.quantity)
+                          const l = ledger(v)
                           return (
                             <tr key={v.id} id={'stock-row-' + v.id} className={highlight === v.id ? 'row-flash' : ''}>
                               <td className="muted">{vi + 1}</td>
-                              <td className="strong">{v.name}</td>
                               <td className="muted">↳</td>
+                              <td className="strong">{v.name}</td>
+                              <td>{v.category}</td>
                               <td>{v.color || '-'}</td>
                               <td>{v.size || '-'}</td>
-                              <td>{v.category}</td>
-                              <td>{v.subCategory || '-'}</td>
-                              <td className="strong">{v.quantity}</td>
-                              <td>{fmtMoney(v.costPrice)}</td>
-                              <td>{fmtMoney(v.sellingPrice)}</td>
-                              <td>{fmtMoney((Number(v.costPrice) || 0) * (Number(v.quantity) || 0))}</td>
-                              <td>{rr.sold > 0 ? `${rr.sold} (${rr.sellThru}%)` : '-'}</td>
-                              <td>{rr.dos == null ? '-' : rr.dos}</td>
+                              <td>{v.location || '-'}</td>
+                              <td>{l.opening}</td>
+                              <td>{l.received}</td>
+                              <td>{l.issued > 0 ? l.issued : '-'}</td>
+                              <td className="strong">{l.closing}</td>
+                              <td>{v.lowStockLevel}</td>
+                              <td>{fmtMoney(l.cost)}</td>
+                              <td>{fmtMoney(l.value)}</td>
                               <td><Badge tone={st.tone}>{st.label}</Badge></td>
                               <td className="row-actions">
                                 {can('edit') && (
@@ -445,30 +452,28 @@ export default function Stock({ ctx }) {
                   })
                 : list.map((r, i) => {
                     const st = statusFor(r)
-                    const rr = runRate(r.styleCode, r.quantity)
+                    const l = ledger(r)
                     return (
                       <tr key={r.id} id={'stock-row-' + r.id} className={highlight === r.id ? 'row-flash' : ''}>
                         <td className="muted">{i + 1}</td>
+                        <td className="strong">{r.styleCode || '-'}</td>
                         <td className="strong">
                           <div className="style-cell">
                             {r.image && <img className="style-thumb" src={r.image} alt="" />}
-                            <div>
-                              {r.name}
-                              {r.location && <div className="cell-sub">{r.location}</div>}
-                            </div>
+                            <div>{r.name}</div>
                           </div>
                         </td>
-                        <td>{r.styleCode || '-'}</td>
+                        <td>{r.category}</td>
                         <td>{r.color || '-'}</td>
                         <td>{r.size || '-'}</td>
-                        <td>{r.category}</td>
-                        <td>{r.subCategory || '-'}</td>
-                        <td className="strong">{r.quantity}</td>
-                        <td>{fmtMoney(r.costPrice)}</td>
-                        <td>{fmtMoney(r.sellingPrice)}</td>
-                        <td>{fmtMoney((Number(r.costPrice) || 0) * (Number(r.quantity) || 0))}</td>
-                        <td>{rr.sold > 0 ? `${rr.sold} (${rr.sellThru}%)` : '-'}</td>
-                        <td>{rr.dos == null ? '-' : rr.dos}</td>
+                        <td>{r.location || '-'}</td>
+                        <td>{l.opening}</td>
+                        <td>{l.received}</td>
+                        <td>{l.issued > 0 ? l.issued : '-'}</td>
+                        <td className="strong">{l.closing}</td>
+                        <td>{r.lowStockLevel}</td>
+                        <td>{fmtMoney(l.cost)}</td>
+                        <td>{fmtMoney(l.value)}</td>
                         <td><Badge tone={st.tone}>{st.label}</Badge></td>
                         <td className="row-actions">
                           {can('edit') && (
@@ -526,8 +531,8 @@ export default function Stock({ ctx }) {
             <Field label="Item Image">
               <ImageUpload value={editing.image} alt={editing.name} onChange={(url) => setEditing({ ...editing, image: url })} />
             </Field>
-            <Field label="Location / Store">
-              <Input value={editing.location} onChange={(e) => setEditing({ ...editing, location: e.target.value })} placeholder="Showroom / Store" />
+            <Field label="Warehouse">
+              <Input value={editing.location} onChange={(e) => setEditing({ ...editing, location: e.target.value })} placeholder="Mumbai / Delhi / Kolkata" />
             </Field>
             <Field label="Category">
               <Select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value, subCategory: '' })}>
@@ -539,8 +544,11 @@ export default function Stock({ ctx }) {
             <Field label="Sub-category">
               <SubCatField value={editing.subCategory} category={editing.category} onChange={(sub) => setEditing({ ...editing, subCategory: sub })} />
             </Field>
-            <Field label="Qty on Hand">
+            <Field label="Closing Stock" hint="pieces currently on hand">
               <Input type="number" min="0" value={editing.quantity} onChange={(e) => setEditing({ ...editing, quantity: e.target.value })} />
+            </Field>
+            <Field label="Stock Received" hint="total received this period (used for Opening)">
+              <Input type="number" min="0" value={editing.receivedStock ?? 0} onChange={(e) => setEditing({ ...editing, receivedStock: e.target.value })} />
             </Field>
             <Field label="Cost Price (₹)">
               <Input type="number" min="0" value={editing.costPrice} onChange={(e) => setEditing({ ...editing, costPrice: e.target.value })} />

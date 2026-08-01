@@ -35,6 +35,13 @@ function buildAllSheets(db) {
   const escDate = (d) => d || ''
   const retailerById = Object.fromEntries((db.retailers || []).map((r) => [r.id, r.name]))
   const poById = Object.fromEntries((db.purchaseOrders || []).map((p) => [p.id, p.poNumber]))
+  const soldByStyle = {}
+  for (const s of db.styles || []) {
+    if (s.stage !== 'Dispatched') continue
+    const code = String(s.styleCode || '').trim().toLowerCase()
+    if (!code) continue
+    soldByStyle[code] = (soldByStyle[code] || 0) + (Number(s.qtyDispatched) || Number(s.quantity) || 0)
+  }
   return [
     {
       name: 'Retailers',
@@ -53,8 +60,16 @@ function buildAllSheets(db) {
     },
     {
       name: 'Ready Stock',
-      cols: ['Sr No', 'Name', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Quantity', 'Cost Price', 'Selling Price', 'Low Stock Level', 'Location'],
-      rows: (db.readyStock || []).map((r, i) => [i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, num(r.quantity), num(r.costPrice), num(r.sellingPrice), num(r.lowStockLevel), r.location])
+      cols: ['Sr', 'SKU Code', 'Item Name', 'Category', 'Color', 'Size', 'Warehouse', 'Opening', 'Received', 'Issued', 'Closing', 'Min', 'Cost', 'Value', 'Status'],
+      rows: (db.readyStock || []).map((r, i) => {
+        const closing = num(r.quantity)
+        const received = num(r.receivedStock)
+        const issued = soldByStyle[String(r.styleCode || '').trim().toLowerCase()] || 0
+        const opening = Math.max(0, closing + issued - received)
+        const cost = num(r.costPrice)
+        const st = closing <= 0 ? 'Out of Stock' : closing <= num(r.lowStockLevel) ? 'Low Stock' : 'In Stock'
+        return [i + 1, r.styleCode || '', r.name, r.category, r.color || '', r.size || '', r.location, opening, received, issued, closing, num(r.lowStockLevel), cost, closing * cost, st]
+      })
     },
     {
       name: 'Purchase Orders',
@@ -63,8 +78,13 @@ function buildAllSheets(db) {
     },
     {
       name: 'Styles',
-      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'PO', 'Quantity', 'Price', 'Fabric', 'Trim', 'Stage', 'Stage Entered', 'Qty Dispatched', 'Notes'],
-      rows: (db.styles || []).map((r) => [r.styleCode, r.styleName, r.category, r.subCategory, poById[r.poId] || '', num(r.quantity), num(r.price), r.fabric, r.trim, r.stage, escDate(r.stageEnteredAt), num(r.qtyDispatched), r.notes])
+      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'Color', 'Size', 'PO', 'Order Qty', 'WIP', 'Dispatch', 'Stage', 'Days', 'Status'],
+      rows: (db.styles || []).map((r) => [
+        r.styleCode, r.styleName, r.category, r.subCategory, r.color || '', r.size || '',
+        poById[r.poId] || '', num(r.quantity), num(r.quantity) - num(r.qtyDispatched), num(r.qtyDispatched),
+        r.stage, r.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(r.stageEnteredAt)) / 86400000)) : 0,
+        r.stage === 'Dispatched' ? 'Dispatched' : 'In Production'
+      ])
     }
   ]
 }

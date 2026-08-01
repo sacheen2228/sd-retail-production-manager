@@ -33,6 +33,7 @@ const COLLECTIONS = {
     map: {
       name: 'name', styleCode: 'style_code', color: 'color', size: 'size', category: 'category',
       subCategory: 'sub_category', quantity: 'quantity',
+      receivedStock: 'received_stock',
       costPrice: 'cost_price', sellingPrice: 'selling_price', lowStockLevel: 'low_stock_level',
       location: 'location', image: 'image', notes: 'notes'
     }
@@ -48,7 +49,8 @@ const COLLECTIONS = {
     table: 'styles',
     map: {
       poId: 'po_id', styleCode: 'style_code', styleName: 'style_name', category: 'category',
-      subCategory: 'sub_category', quantity: 'quantity', price: 'price', fabric: 'fabric',
+      subCategory: 'sub_category', color: 'color', size: 'size',
+      quantity: 'quantity', price: 'price', fabric: 'fabric',
       trim: 'trim', stage: 'stage', stageEnteredAt: 'stage_entered_at', qtyDispatched: 'qty_dispatched',
       image: 'image', notes: 'notes', history: 'history'
     }
@@ -61,7 +63,7 @@ const COLLECTIONS = {
 
 const NUMERIC_COLS = new Set([
   'stock', 'lead_time_days', 'cost_price', 'consumption', 'low_stock_level',
-  'quantity', 'selling_price', 'value', 'price', 'qty_dispatched'
+  'quantity', 'received_stock', 'selling_price', 'value', 'price', 'qty_dispatched'
 ])
 
 function todayStr() {

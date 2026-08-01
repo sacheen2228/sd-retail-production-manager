@@ -68,6 +68,7 @@ create table if not exists ready_stock (
   category         text not null default 'Occasions',
   sub_category     text not null default '',
   quantity         numeric not null default 0 check (quantity >= 0),
+  received_stock   numeric not null default 0 check (received_stock >= 0),
   cost_price       numeric not null default 0 check (cost_price >= 0),
   selling_price    numeric not null default 0 check (selling_price >= 0),
   low_stock_level  numeric not null default 2 check (low_stock_level >= 0),
@@ -81,6 +82,7 @@ create table if not exists ready_stock (
 alter table ready_stock add column if not exists style_code text not null default '';
 alter table ready_stock add column if not exists color     text not null default '';
 alter table ready_stock add column if not exists size      text not null default '';
+alter table ready_stock add column if not exists received_stock numeric not null default 0;
 
 create index if not exists idx_ready_stock_style on ready_stock (lower(style_code));
 
@@ -103,6 +105,8 @@ create table if not exists styles (
   style_name       text not null default '',
   category         text not null default 'Occasions',
   sub_category     text not null default '',
+  color            text not null default '',
+  size             text not null default '',
   quantity         numeric not null default 0 check (quantity >= 0),
   price            numeric not null default 0 check (price >= 0),
   fabric           text not null default '',
@@ -115,6 +119,10 @@ create table if not exists styles (
   history          jsonb not null default '[]'::jsonb,
   created_at       timestamptz not null default now()
 );
+
+-- Upgrades for existing projects: adds the variant columns if missing.
+alter table styles add column if not exists color text not null default '';
+alter table styles add column if not exists size  text not null default '';
 
 -- ----------------------------------------------------------------------------
 -- User profiles & roles

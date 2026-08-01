@@ -20,9 +20,9 @@ export function seedData() {
   const daysAgo = (n) => daysFromNow(-n)
   const db = {
     retailers: [
-      { id: uid(), name: 'The Wedding House', city: 'New Delhi', contact: '+91 98xxx 10001' },
-      { id: uid(), name: 'Bridal Atelier Store', city: 'Mumbai', contact: '+91 98xxx 10002' },
-      { id: uid(), name: 'Ethnic Couture Boutique', city: 'Kolkata', contact: '+91 98xxx 10003' },
+      { id: uid(), name: 'Pernia Designs', city: 'Mumbai', contact: '+91 98xxx 10001' },
+      { id: uid(), name: 'AZA Fashion', city: 'Mumbai', contact: '+91 98xxx 10002' },
+      { id: uid(), name: 'The Wedding House', city: 'New Delhi', contact: '+91 98xxx 10003' },
       { id: uid(), name: 'Royal Occasions', city: 'Jaipur', contact: '+91 98xxx 10004' }
     ],
     vendors: [
@@ -40,161 +40,204 @@ export function seedData() {
       { id: uid(), name: 'Pearl Buttons', type: 'Trim', stock: 420, uom: 'pcs', vendor: 'Trim & Beads Supply Co.', leadTimeDays: 5, costPrice: 12, consumption: 6, lowStockLevel: 100 }
     ],
     readyStock: [
-      { id: uid(), name: 'Red Banarasi Lehenga Set', styleCode: 'LEH-101', color: 'Red', size: 'Free', category: 'Bridal', subCategory: 'Lehenga Set', quantity: 6, costPrice: 45000, sellingPrice: 95000, lowStockLevel: 2, location: 'Showroom', notes: 'Heavy zardozi' },
-      { id: uid(), name: 'Ivory Raw Silk Anarkali', styleCode: 'AN-310', color: 'Ivory', size: 'M', category: 'Occasions', subCategory: 'Anarkali', quantity: 8, costPrice: 20000, sellingPrice: 42000, lowStockLevel: 3, location: 'Store', notes: '' },
-      { id: uid(), name: 'Gold Organza Sharara Set', styleCode: 'SH-208', color: 'Gold', size: 'Free', category: 'Occasions', subCategory: 'Sharara Set', quantity: 4, costPrice: 22000, sellingPrice: 48000, lowStockLevel: 2, location: 'Store', notes: '' },
-      { id: uid(), name: 'Emerald Dupion Gown', styleCode: 'GW-115', color: 'Emerald', size: 'M', category: 'Cocktail Wear', subCategory: 'Gown', quantity: 3, costPrice: 30000, sellingPrice: 65000, lowStockLevel: 2, location: 'Showroom', notes: '' },
-      { id: uid(), name: 'Pastel Kurta Set', styleCode: 'KU-422', color: 'Pastel Pink', size: 'M', category: 'PreT', subCategory: 'Kurta Set', quantity: 15, costPrice: 8000, sellingPrice: 15000, lowStockLevel: 5, location: 'Store', notes: '' },
-      { id: uid(), name: 'Black Bandhgala Suit', styleCode: 'BD-506', color: 'Navy', size: 'L', category: 'Menswear', subCategory: 'Bandhgala', quantity: 5, costPrice: 18000, sellingPrice: 35000, lowStockLevel: 2, location: 'Store', notes: '' }
+      { id: uid(), name: 'Ivory Silk Lehenga Set', styleCode: 'BR-LH-001', color: 'Ivory', size: 'M', category: 'Bridal', subCategory: 'Lehenga Set', quantity: 4, receivedStock: 2, costPrice: 8500, sellingPrice: 24500, lowStockLevel: 2, location: 'Mumbai', notes: '' },
+      { id: uid(), name: 'Ivory Silk Saree Set', styleCode: 'BR-SA-001', color: 'Ivory', size: 'Free', category: 'Bridal', subCategory: 'Saree Set', quantity: 5, receivedStock: 1, costPrice: 9800, sellingPrice: 26900, lowStockLevel: 2, location: 'Mumbai', notes: '' },
+      { id: uid(), name: 'Black Organza Gown', styleCode: 'CW-GW-001', color: 'Black', size: 'L', category: 'Cocktail Wear', subCategory: 'Gown', quantity: 6, receivedStock: 0, costPrice: 6800, sellingPrice: 18900, lowStockLevel: 2, location: 'Delhi', notes: '' },
+      { id: uid(), name: 'Teal Sharara Set', styleCode: 'CW-SH-001', color: 'Teal', size: 'M', category: 'Cocktail Wear', subCategory: 'Sharara Set', quantity: 3, receivedStock: 0, costPrice: 5100, sellingPrice: 14200, lowStockLevel: 2, location: 'Mumbai', notes: '' },
+      { id: uid(), name: 'Maroon Velvet Gown', styleCode: 'CW-GW-002', color: 'Maroon', size: 'S', category: 'Cocktail Wear', subCategory: 'Gown', quantity: 1, receivedStock: 0, costPrice: 6400, sellingPrice: 17500, lowStockLevel: 2, location: 'Delhi', notes: '' },
+      { id: uid(), name: 'Navy Bandhgala', styleCode: 'MN-BD-001', color: 'Navy', size: 'L', category: 'Menswear', subCategory: 'Bandhgala', quantity: 2, receivedStock: 0, costPrice: 7400, sellingPrice: 19900, lowStockLevel: 2, location: 'Delhi', notes: '' },
+      { id: uid(), name: 'Off-white Sherwani', styleCode: 'MN-SW-001', color: 'Off-white', size: 'M', category: 'Menswear', subCategory: 'Sherwani', quantity: 4, receivedStock: 0, costPrice: 8200, sellingPrice: 22500, lowStockLevel: 2, location: 'Kolkata', notes: '' },
+      { id: uid(), name: 'Red Banarasi Suit', styleCode: 'OC-ST-001', color: 'Red', size: 'M', category: 'Occasions', subCategory: 'Suit', quantity: 12, receivedStock: 0, costPrice: 3200, sellingPrice: 8900, lowStockLevel: 2, location: 'Mumbai', notes: '' },
+      { id: uid(), name: 'Gold Raw Silk Anarkali', styleCode: 'OC-AN-001', color: 'Gold', size: 'Free', category: 'Occasions', subCategory: 'Anarkali', quantity: 0, receivedStock: 0, costPrice: 4200, sellingPrice: 11500, lowStockLevel: 2, location: 'Kolkata', notes: '' },
+      { id: uid(), name: 'Pastel Kurta Set', styleCode: 'OC-KS-001', color: 'Pastel Pink', size: 'M', category: 'Occasions', subCategory: 'Kurta Set', quantity: 9, receivedStock: 0, costPrice: 2100, sellingPrice: 5900, lowStockLevel: 2, location: 'Kolkata', notes: '' }
     ],
     purchaseOrders: [
       {
         id: uid(),
-        poNumber: 'PO-2401',
+        poNumber: 'PO-2026-001',
         retailerId: '',
-        orderDate: daysAgo(12),
-        deliveryDate: daysFromNow(25),
+        orderDate: daysAgo(15),
+        deliveryDate: daysFromNow(12),
         status: 'In Production',
-        value: 1850000,
-        notes: 'Bridal trunk show order',
-        createdAt: daysAgo(12)
+        value: 7050000,
+        notes: 'Bridal capsule for trunk show',
+        createdAt: daysAgo(15)
       },
       {
         id: uid(),
-        poNumber: 'PO-2402',
+        poNumber: 'PO-2026-002',
         retailerId: '',
-        orderDate: daysAgo(20),
-        deliveryDate: daysFromNow(9),
+        orderDate: daysAgo(8),
+        deliveryDate: daysFromNow(20),
         status: 'In Production',
-        value: 960000,
-        notes: 'Occasion wear capsule',
-        createdAt: daysAgo(20)
+        value: 6400000,
+        notes: 'Occasion wear re-order',
+        createdAt: daysAgo(8)
       },
       {
         id: uid(),
-        poNumber: 'PO-2403',
+        poNumber: 'PO-2026-003',
         retailerId: '',
-        orderDate: daysAgo(30),
-        deliveryDate: daysFromNow(3),
+        orderDate: daysAgo(40),
+        deliveryDate: daysAgo(5),
         status: 'Dispatched',
-        value: 1240000,
-        notes: 'Festive collection early dispatch',
-        createdAt: daysAgo(30)
-      },
-      {
-        id: uid(),
-        poNumber: 'PO-2404',
-        retailerId: '',
-        orderDate: daysAgo(6),
-        deliveryDate: daysFromNow(40),
-        status: 'Confirmed',
-        value: 720000,
-        notes: 'Repeat order',
-        createdAt: daysAgo(6)
+        value: 128200,
+        notes: 'Dispatched stock replenishment',
+        createdAt: daysAgo(40)
       }
     ],
     styles: [
       {
         id: uid(),
         poId: '',
-        styleCode: 'LEH-101',
+        styleCode: 'BR-001',
         styleName: 'Red Banarasi Lehenga Set',
         category: 'Bridal',
         subCategory: 'Lehenga Set',
-        quantity: 12,
+        color: 'Red',
+        size: 'M',
+        quantity: 50,
         price: 95000,
         fabric: 'Banarasi Silk',
         trim: 'Zari Border (gold)',
-        stage: 'Embroidery-Kolkata',
-        stageEnteredAt: daysAgo(4),
-        qtyDispatched: 0,
-        notes: 'Heavy zardozi on lehenga + dupatta',
-        createdAt: daysAgo(12)
-      },
-      {
-        id: uid(),
-        poId: '',
-        styleCode: 'AN-310',
-        styleName: 'Ivory Raw Silk Anarkali',
-        category: 'Occasions',
-        subCategory: 'Anarkali',
-        quantity: 20,
-        price: 42000,
-        fabric: 'Raw Silk Dupion',
-        trim: 'Pearl Buttons',
-        stage: 'Cutting',
-        stageEnteredAt: daysAgo(2),
-        qtyDispatched: 0,
-        notes: 'Awaiting Master fit approval',
-        createdAt: daysAgo(12)
-      },
-      {
-        id: uid(),
-        poId: '',
-        styleCode: 'SH-208',
-        styleName: 'Gold Organza Sharara',
-        category: 'Occasions',
-        subCategory: 'Sharara Set',
-        quantity: 15,
-        price: 48000,
-        fabric: 'Organza',
-        trim: 'Zari Border (gold)',
         stage: 'Stitching',
-        stageEnteredAt: daysAgo(3),
-        qtyDispatched: 0,
-        notes: 'Split across two stitchers',
-        createdAt: daysAgo(20)
+        stageEnteredAt: daysAgo(8),
+        qtyDispatched: 8,
+        notes: '50 pcs on order, 8 already dispatched',
+        createdAt: daysAgo(15)
       },
       {
         id: uid(),
         poId: '',
-        styleCode: 'BR-2408',
-        styleName: 'Maroon Velvet Jacket Set',
+        styleCode: 'BR-001',
+        styleName: 'Red Banarasi Lehenga Set',
         category: 'Bridal',
-        subCategory: 'Jacket Set',
-        quantity: 8,
-        price: 88000,
+        subCategory: 'Lehenga Set',
+        color: 'Red',
+        size: 'L',
+        quantity: 40,
+        price: 95000,
         fabric: 'Banarasi Silk',
         trim: 'Zari Border (gold)',
-        stage: 'QC',
-        stageEnteredAt: daysAgo(1),
-        qtyDispatched: 0,
-        notes: 'Final QC sign-off before packing',
-        createdAt: daysAgo(30)
+        stage: 'Finishing',
+        stageEnteredAt: daysAgo(5),
+        qtyDispatched: 5,
+        notes: '',
+        createdAt: daysAgo(15)
       },
       {
         id: uid(),
         poId: '',
-        styleCode: 'GW-115',
-        styleName: 'Emerald Dupion Gown',
-        category: 'Occasions',
-        subCategory: 'Gown',
-        quantity: 10,
-        price: 65000,
-        fabric: 'Raw Silk Dupion',
-        trim: 'Pearl Buttons',
-        stage: 'Dispatched',
-        stageEnteredAt: daysAgo(2),
-        qtyDispatched: 10,
-        notes: 'Dispatched ahead of festival window',
-        createdAt: daysAgo(30)
-      },
-      {
-        id: uid(),
-        poId: '',
-        styleCode: 'BR-2420',
+        styleCode: 'OC-101',
         styleName: 'Pastel Organza Saree Set',
         category: 'Occasions',
         subCategory: 'Saree Set',
-        quantity: 25,
+        color: 'Navy',
+        size: 'XL',
+        quantity: 100,
         price: 28000,
         fabric: 'Organza',
         trim: 'Zari Border (gold)',
-        stage: 'Sampling',
+        stage: 'Cutting',
         stageEnteredAt: daysAgo(3),
-        qtyDispatched: 0,
-        notes: 'Sample pending retailer approval',
-        createdAt: daysAgo(6)
+        qtyDispatched: 10,
+        notes: '',
+        createdAt: daysAgo(8)
+      },
+      {
+        id: uid(),
+        poId: '',
+        styleCode: 'BR-LH-001',
+        styleName: 'Ivory Silk Lehenga Set',
+        category: 'Bridal',
+        subCategory: 'Lehenga Set',
+        color: 'Ivory',
+        size: 'M',
+        quantity: 3,
+        price: 24500,
+        fabric: 'Banarasi Silk',
+        trim: 'Zari Border (gold)',
+        stage: 'Dispatched',
+        stageEnteredAt: daysAgo(12),
+        qtyDispatched: 3,
+        notes: '',
+        createdAt: daysAgo(40)
+      },
+      {
+        id: uid(),
+        poId: '',
+        styleCode: 'BR-SA-001',
+        styleName: 'Ivory Silk Saree Set',
+        category: 'Bridal',
+        subCategory: 'Saree Set',
+        color: 'Ivory',
+        size: 'Free',
+        quantity: 2,
+        price: 26900,
+        fabric: 'Raw Silk Dupion',
+        trim: 'Pearl Buttons',
+        stage: 'Dispatched',
+        stageEnteredAt: daysAgo(10),
+        qtyDispatched: 2,
+        notes: '',
+        createdAt: daysAgo(40)
+      },
+      {
+        id: uid(),
+        poId: '',
+        styleCode: 'CW-GW-001',
+        styleName: 'Black Organza Gown',
+        category: 'Cocktail Wear',
+        subCategory: 'Gown',
+        color: 'Black',
+        size: 'L',
+        quantity: 2,
+        price: 18900,
+        fabric: 'Organza',
+        trim: 'Pearl Buttons',
+        stage: 'Dispatched',
+        stageEnteredAt: daysAgo(8),
+        qtyDispatched: 2,
+        notes: '',
+        createdAt: daysAgo(40)
+      },
+      {
+        id: uid(),
+        poId: '',
+        styleCode: 'CW-SH-001',
+        styleName: 'Teal Sharara Set',
+        category: 'Cocktail Wear',
+        subCategory: 'Sharara Set',
+        color: 'Teal',
+        size: 'M',
+        quantity: 1,
+        price: 14200,
+        fabric: 'Raw Silk Dupion',
+        trim: 'Pearl Buttons',
+        stage: 'Dispatched',
+        stageEnteredAt: daysAgo(6),
+        qtyDispatched: 1,
+        notes: '',
+        createdAt: daysAgo(40)
+      },
+      {
+        id: uid(),
+        poId: '',
+        styleCode: 'CW-GW-002',
+        styleName: 'Maroon Velvet Gown',
+        category: 'Cocktail Wear',
+        subCategory: 'Gown',
+        color: 'Maroon',
+        size: 'S',
+        quantity: 1,
+        price: 17500,
+        fabric: 'Banarasi Silk',
+        trim: 'Pearl Buttons',
+        stage: 'Dispatched',
+        stageEnteredAt: daysAgo(4),
+        qtyDispatched: 1,
+        notes: '',
+        createdAt: daysAgo(40)
       }
     ]
   }
@@ -202,13 +245,11 @@ export function seedData() {
   db.purchaseOrders[0].retailerId = db.retailers[0].id
   db.purchaseOrders[1].retailerId = db.retailers[1].id
   db.purchaseOrders[2].retailerId = db.retailers[2].id
-  db.purchaseOrders[3].retailerId = db.retailers[3].id
 
   const poStyles = [
     [0, 1],
-    [2, 3],
-    [4],
-    [5]
+    [2],
+    [3, 4, 5, 6, 7]
   ]
   poStyles.forEach((styleIdx, poIdx) => {
     styleIdx.forEach((s) => {
@@ -222,6 +263,8 @@ export function seedData() {
 function normalize(db) {
   if (!Array.isArray(db.auditLog)) db.auditLog = []
   db.styles.forEach((s) => {
+    if (s.color === undefined) s.color = ''
+    if (s.size === undefined) s.size = ''
     if (!Array.isArray(s.history)) {
       s.history = [
         {
@@ -243,6 +286,7 @@ function normalize(db) {
     if (r.styleCode === undefined) r.styleCode = ''
     if (r.color === undefined) r.color = ''
     if (r.size === undefined) r.size = ''
+    if (r.receivedStock === undefined) r.receivedStock = 0
     if (r.lowStockLevel === undefined) r.lowStockLevel = 2
     if (r.costPrice === undefined) r.costPrice = 0
     if (r.sellingPrice === undefined) r.sellingPrice = 0

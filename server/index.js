@@ -169,14 +169,15 @@ const HEADER_MAP = {
   size: ['size', 'sizes', 'garmentsize', 'fit'],
   category: ['category', 'cat'],
   subCategory: ['subcategory', 'subcat', 'sub', 'category2', 'subcategory2'],
-  quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'pieces', 'pcs', 'nos'],
+  quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'closing', 'pieces', 'pcs', 'nos'],
+  receivedStock: ['receivedstock', 'received', 'stockreceived', 'incoming'],
   costPrice: ['costprice', 'cost', 'unitcost', 'costperpiece', 'costpriceinr'],
   sellingPrice: ['sellingprice', 'selling', 'price', 'mrp', 'saleprice', 'sellingpriceinr'],
   lowStockLevel: ['lowstocklevel', 'lowstock', 'reorderlevel', 'minstock', 'alertlevel'],
   location: ['location', 'store', 'city', 'storename', 'retailer']
 }
 
-const FLOAT_KEYS = ['quantity', 'costPrice', 'sellingPrice', 'lowStockLevel']
+const FLOAT_KEYS = ['quantity', 'receivedStock', 'costPrice', 'sellingPrice', 'lowStockLevel']
 
 app.post('/api/readyStock/upload', (req, res) => {
   const { file, filename } = req.body || {}
@@ -412,8 +413,11 @@ app.get('/api/reports/wip', (_req, res) => {
       retailer: retailer ? retailer.name : '-',
       category: s.category,
       subCategory: s.subCategory || '',
+      color: s.color || '',
+      size: s.size || '',
       quantity: s.quantity,
       qtyDispatched: s.qtyDispatched,
+      wip: (Number(s.quantity) || 0) - (Number(s.qtyDispatched) || 0),
       stage: s.stage,
       daysInStage: s.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(s.stageEnteredAt)) / 86400000)) : 0,
       deliveryDate: due,
