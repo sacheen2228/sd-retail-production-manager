@@ -42,7 +42,7 @@ function buildAllSheets(db) {
     if (!code) continue
     soldByStyle[code] = (soldByStyle[code] || 0) + (Number(s.qtyDispatched) || Number(s.quantity) || 0)
   }
-  return [
+  const sheets = [
     {
       name: 'Retailers',
       cols: ['Name', 'City', 'Contact'],
@@ -59,6 +59,21 @@ function buildAllSheets(db) {
       rows: (db.fabrics || []).map((r) => [r.name, r.type, num(r.stock), r.uom, r.vendor, num(r.leadTimeDays), num(r.costPrice), num(r.consumption), num(r.lowStockLevel)])
     },
     {
+      name: 'Styles',
+      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'Color', 'Size', 'PO', 'Order Qty', 'WIP', 'Dispatch', 'Stage', 'Days', 'Status'],
+      rows: (db.styles || []).map((r, i) => {
+        const qty = num(r.quantity)
+        const dispatched = num(r.qtyDispatched)
+        const row = i + 2
+        return [
+          r.styleCode, r.styleName, r.category, r.subCategory, r.color || '', r.size || '',
+          poById[r.poId] || '', qty, `=H${row}-J${row}`, dispatched,
+          r.stage, r.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(r.stageEnteredAt)) / 86400000)) : 0,
+          `=IF(J${i + 2}>0,"Dispatched","In Production")`
+        ]
+      })
+    },
+    {
       name: 'Ready Stock',
       cols: ['Sr', 'SKU Code', 'Item Name', 'Category', 'Color', 'Size', 'Warehouse', 'Opening', 'Received', 'Issued', 'Closing', 'Min', 'Cost', 'Value', 'Status'],
       rows: (db.readyStock || []).map((r, i) => {
@@ -68,25 +83,33 @@ function buildAllSheets(db) {
         const opening = Math.max(0, closing + issued - received)
         const cost = num(r.costPrice)
         const st = closing <= 0 ? 'Out of Stock' : closing <= num(r.lowStockLevel) ? 'Low Stock' : 'In Stock'
-        return [i + 1, r.styleCode || '', r.name, r.category, r.color || '', r.size || '', r.location, opening, received, issued, closing, num(r.lowStockLevel), cost, closing * cost, st]
+        const row = i + 2
+        return [
+          i + 1,
+          r.styleCode || '',
+          r.name,
+          r.category,
+          r.color || '',
+          r.size || '',
+          r.location,
+          `=MAX(0,K${row}+J${row}-I${row})`,
+          received,
+          `=IFERROR(SUMIF(Styles!$A:$A,B${row},Styles!$J:$J),0)`,
+          closing,
+          num(r.lowStockLevel),
+          cost,
+          `=K${row}*M${row}`,
+          `=IF(K${row}<=0,"Out of Stock",IF(K${row}<=L${row},"Low Stock","In Stock"))`
+        ]
       })
     },
     {
       name: 'Purchase Orders',
       cols: ['PO Number', 'Retailer', 'Order Date', 'Delivery Date', 'Status', 'Value', 'Notes'],
       rows: (db.purchaseOrders || []).map((r) => [r.poNumber, retailerById[r.retailerId] || '', escDate(r.orderDate), escDate(r.deliveryDate), r.status, num(r.value), r.notes])
-    },
-    {
-      name: 'Styles',
-      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'Color', 'Size', 'PO', 'Order Qty', 'WIP', 'Dispatch', 'Stage', 'Days', 'Status'],
-      rows: (db.styles || []).map((r) => [
-        r.styleCode, r.styleName, r.category, r.subCategory, r.color || '', r.size || '',
-        poById[r.poId] || '', num(r.quantity), num(r.quantity) - num(r.qtyDispatched), num(r.qtyDispatched),
-        r.stage, r.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(r.stageEnteredAt)) / 86400000)) : 0,
-        r.stage === 'Dispatched' ? 'Dispatched' : 'In Production'
-      ])
     }
   ]
+  return sheets
 }
 
 export async function exportAllToSheet(db) {

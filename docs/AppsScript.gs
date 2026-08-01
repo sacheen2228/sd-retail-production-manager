@@ -43,7 +43,19 @@ function doPost(e) {
         values.push(row.concat(Array(Math.max(0, width - row.length)).fill('')))
       }
       target.clearContents()
-      if (width) target.getRange(1, 1, values.length, width).setValues(values)
+      if (width) {
+        const range = target.getRange(1, 1, values.length, width)
+        range.setValues(values)
+        // Any cell whose value starts with "=" is a live formula → apply via setFormula
+        for (let r = 0; r < values.length; r++) {
+          for (let c = 0; c < values[r].length; c++) {
+            const cell = values[r][c]
+            if (typeof cell === 'string' && cell.startsWith('=')) {
+              range.getCell(r + 1, c + 1).setFormula(cell)
+            }
+          }
+        }
+      }
       written += s.rows.length
     }
     return respond({ ok: true, count: written, sheets: list.length, spreadsheet: ss.getUrl() })

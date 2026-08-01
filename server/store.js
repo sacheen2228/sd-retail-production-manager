@@ -20,10 +20,7 @@ export function seedData() {
   const daysAgo = (n) => daysFromNow(-n)
   const db = {
     retailers: [
-      { id: uid(), name: 'Pernia Designs', city: 'Mumbai', contact: '+91 98xxx 10001' },
-      { id: uid(), name: 'AZA Fashion', city: 'Mumbai', contact: '+91 98xxx 10002' },
-      { id: uid(), name: 'The Wedding House', city: 'New Delhi', contact: '+91 98xxx 10003' },
-      { id: uid(), name: 'Royal Occasions', city: 'Jaipur', contact: '+91 98xxx 10004' }
+      { id: uid(), name: 'AZA Fashion', city: 'Mumbai', contact: '+91 98xxx 10002' }
     ],
     vendors: [
       { id: uid(), name: 'Meher Embroidery House', type: 'Embroidery-Kolkata', location: 'Kolkata', contact: 'meher@example.com' },
@@ -242,9 +239,7 @@ export function seedData() {
     ]
   }
 
-  db.purchaseOrders[0].retailerId = db.retailers[0].id
-  db.purchaseOrders[1].retailerId = db.retailers[1].id
-  db.purchaseOrders[2].retailerId = db.retailers[2].id
+  db.purchaseOrders[1].retailerId = db.retailers[0].id
 
   const poStyles = [
     [0, 1],

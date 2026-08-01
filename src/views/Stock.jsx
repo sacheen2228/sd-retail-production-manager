@@ -193,7 +193,24 @@ export default function Stock({ ctx }) {
     const rows = list.map((r, i) => {
       const st = statusFor(r)
       const l = ledger(r)
-      return [i + 1, r.styleCode || '', r.name, r.category, r.color || '', r.size || '', r.location, l.opening, l.received, l.issued, l.closing, r.lowStockLevel, l.cost, l.value, st.label]
+      const row = i + 2
+      return [
+        i + 1,
+        r.styleCode || '',
+        r.name,
+        r.category,
+        r.color || '',
+        r.size || '',
+        r.location,
+        `=MAX(0,K${row}+J${row}-I${row})`,
+        l.received,
+        `=IFERROR(SUMIF(Styles!$A:$A,B${row},Styles!$J:$J),0)`,
+        l.closing,
+        r.lowStockLevel,
+        l.cost,
+        `=K${row}*M${row}`,
+        `=IF(K${row}<=0,"Out of Stock",IF(K${row}<=L${row},"Low Stock","In Stock"))`
+      ]
     })
     return { cols, rows }
   }, [list, soldByStyle])

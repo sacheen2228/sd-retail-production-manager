@@ -36,7 +36,10 @@ export default function Reports({ ctx }) {
   const wipExport = useMemo(() => {
     if (!wip) return null
     const cols = ['Sr', 'PO', 'Buyer', 'Style', 'Color', 'Size', 'Order Qty', 'WIP', 'Stage', 'Days', 'Dispatch', 'Status']
-    const rows = wip.map((r, i) => [i + 1, r.poNumber, r.retailer, r.styleCode, r.color, r.size, r.quantity, r.wip, r.stage, r.daysInStage, r.qtyDispatched, r.status])
+    const rows = wip.map((r, i) => {
+      const row = i + 2
+      return [i + 1, r.poNumber, r.retailer, r.styleCode, r.color, r.size, r.quantity, `=G${row}-K${row}`, r.stage, r.daysInStage, r.qtyDispatched, `=IF(K${row}>0,"Dispatched","In Production")`]
+    })
     return { cols, rows }
   }, [wip])
 

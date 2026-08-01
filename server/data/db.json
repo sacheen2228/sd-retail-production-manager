@@ -1,61 +1,43 @@
 {
   "retailers": [
     {
-      "id": "msa2kio02062cn",
-      "name": "Pernia Designs",
-      "city": "Mumbai",
-      "contact": "+91 98xxx 10001"
-    },
-    {
-      "id": "msa2kio1wr113l",
+      "id": "msagtg1re1new7",
       "name": "AZA Fashion",
       "city": "Mumbai",
       "contact": "+91 98xxx 10002"
-    },
-    {
-      "id": "msa2kio1ycbwe6",
-      "name": "The Wedding House",
-      "city": "New Delhi",
-      "contact": "+91 98xxx 10003"
-    },
-    {
-      "id": "msa2kio1otfshz",
-      "name": "Royal Occasions",
-      "city": "Jaipur",
-      "contact": "+91 98xxx 10004"
     }
   ],
   "vendors": [
     {
-      "id": "msa2kio19tew72",
+      "id": "msagtg1redz0dg",
       "name": "Meher Embroidery House",
       "type": "Embroidery-Kolkata",
       "location": "Kolkata",
       "contact": "meher@example.com"
     },
     {
-      "id": "msa2kio12w2baf",
+      "id": "msagtg1rj4h4v7",
       "name": "Zari & Thread Studio",
       "type": "Embroidery-Mumbai",
       "location": "Mumbai",
       "contact": "zari@example.com"
     },
     {
-      "id": "msa2kio133znr7",
+      "id": "msagtg1r9fx0e5",
       "name": "Banaras Silk Traders",
       "type": "Fabric",
       "location": "Varanasi",
       "contact": "banaras@example.com"
     },
     {
-      "id": "msa2kio1ws3erf",
+      "id": "msagtg1r09yqip",
       "name": "Trim & Beads Supply Co.",
       "type": "Trims",
       "location": "Mumbai",
       "contact": "trims@example.com"
     },
     {
-      "id": "msa2kio15z5f9b",
+      "id": "msagtg1rjouli9",
       "name": "Heritage Tailoring Unit",
       "type": "Stitching",
       "location": "Jaipur",
@@ -64,7 +46,7 @@
   ],
   "fabrics": [
     {
-      "id": "msa2kio1nvmd7s",
+      "id": "msagtg1r920f3n",
       "name": "Banarasi Silk",
       "type": "Silk",
       "stock": 240,
@@ -76,7 +58,7 @@
       "lowStockLevel": 80
     },
     {
-      "id": "msa2kio1kq8gt0",
+      "id": "msagtg1r6hpmll",
       "name": "Raw Silk Dupion",
       "type": "Silk",
       "stock": 180,
@@ -88,7 +70,7 @@
       "lowStockLevel": 60
     },
     {
-      "id": "msa2kio1ag3iua",
+      "id": "msagtg1rwygslf",
       "name": "Organza",
       "type": "Georgette",
       "stock": 320,
@@ -100,7 +82,7 @@
       "lowStockLevel": 100
     },
     {
-      "id": "msa2kio17smarx",
+      "id": "msagtg1r5qr8lu",
       "name": "Zari Border (gold)",
       "type": "Trim",
       "stock": 60,
@@ -112,7 +94,7 @@
       "lowStockLevel": 25
     },
     {
-      "id": "msa2kio1v31q9p",
+      "id": "msagtg1rjd7467",
       "name": "Pearl Buttons",
       "type": "Trim",
       "stock": 420,
@@ -126,7 +108,7 @@
   ],
   "readyStock": [
     {
-      "id": "msa2kio14it451",
+      "id": "msagtg1rsekoeo",
       "name": "Ivory Silk Lehenga Set",
       "styleCode": "BR-LH-001",
       "color": "Ivory",
@@ -142,7 +124,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1cvjdp3",
+      "id": "msagtg1repqbr6",
       "name": "Ivory Silk Saree Set",
       "styleCode": "BR-SA-001",
       "color": "Ivory",
@@ -158,7 +140,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1jpk7ku",
+      "id": "msagtg1rw2k93z",
       "name": "Black Organza Gown",
       "styleCode": "CW-GW-001",
       "color": "Black",
@@ -174,7 +156,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio19kxtq1",
+      "id": "msagtg1rvs1prs",
       "name": "Teal Sharara Set",
       "styleCode": "CW-SH-001",
       "color": "Teal",
@@ -190,7 +172,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1k4d1oc",
+      "id": "msagtg1rh7ywbr",
       "name": "Maroon Velvet Gown",
       "styleCode": "CW-GW-002",
       "color": "Maroon",
@@ -206,7 +188,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio189o8pf",
+      "id": "msagtg1rdmnd6w",
       "name": "Navy Bandhgala",
       "styleCode": "MN-BD-001",
       "color": "Navy",
@@ -222,7 +204,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio15xu5wb",
+      "id": "msagtg1rma8jk1",
       "name": "Off-white Sherwani",
       "styleCode": "MN-SW-001",
       "color": "Off-white",
@@ -238,7 +220,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1hozq70",
+      "id": "msagtg1r3rqq73",
       "name": "Red Banarasi Suit",
       "styleCode": "OC-ST-001",
       "color": "Red",
@@ -254,7 +236,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1dztevu",
+      "id": "msagtg1rlksmvx",
       "name": "Gold Raw Silk Anarkali",
       "styleCode": "OC-AN-001",
       "color": "Gold",
@@ -270,7 +252,7 @@
       "notes": ""
     },
     {
-      "id": "msa2kio1e38xr6",
+      "id": "msagtg1rzuthiw",
       "name": "Pastel Kurta Set",
       "styleCode": "OC-KS-001",
       "color": "Pastel Pink",
@@ -288,9 +270,9 @@
   ],
   "purchaseOrders": [
     {
-      "id": "msa2kio19t2qr4",
+      "id": "msagtg1rioj81f",
       "poNumber": "PO-2026-001",
-      "retailerId": "msa2kio02062cn",
+      "retailerId": "",
       "orderDate": "2026-07-17",
       "deliveryDate": "2026-08-13",
       "status": "In Production",
@@ -299,9 +281,9 @@
       "createdAt": "2026-07-17"
     },
     {
-      "id": "msa2kio2yz4pod",
+      "id": "msagtg1sx7cuek",
       "poNumber": "PO-2026-002",
-      "retailerId": "msa2kio1wr113l",
+      "retailerId": "msagtg1re1new7",
       "orderDate": "2026-07-24",
       "deliveryDate": "2026-08-21",
       "status": "In Production",
@@ -310,9 +292,9 @@
       "createdAt": "2026-07-24"
     },
     {
-      "id": "msa2kio27u2w8e",
+      "id": "msagtg1sggn73w",
       "poNumber": "PO-2026-003",
-      "retailerId": "msa2kio1ycbwe6",
+      "retailerId": "",
       "orderDate": "2026-06-22",
       "deliveryDate": "2026-07-27",
       "status": "Dispatched",
@@ -323,8 +305,8 @@
   ],
   "styles": [
     {
-      "id": "msa2kio2auz9lv",
-      "poId": "msa2kio19t2qr4",
+      "id": "msagtg1spwv680",
+      "poId": "msagtg1rioj81f",
       "styleCode": "BR-001",
       "styleName": "Red Banarasi Lehenga Set",
       "category": "Bridal",
@@ -350,8 +332,8 @@
       ]
     },
     {
-      "id": "msa2kio2o26lhk",
-      "poId": "msa2kio19t2qr4",
+      "id": "msagtg1sjfkm1h",
+      "poId": "msagtg1rioj81f",
       "styleCode": "BR-001",
       "styleName": "Red Banarasi Lehenga Set",
       "category": "Bridal",
@@ -377,8 +359,8 @@
       ]
     },
     {
-      "id": "msa2kio2rhqdck",
-      "poId": "msa2kio2yz4pod",
+      "id": "msagtg1suq0u34",
+      "poId": "msagtg1sx7cuek",
       "styleCode": "OC-101",
       "styleName": "Pastel Organza Saree Set",
       "category": "Occasions",
@@ -404,8 +386,8 @@
       ]
     },
     {
-      "id": "msa2kio2l78znu",
-      "poId": "msa2kio27u2w8e",
+      "id": "msagtg1sxxltdr",
+      "poId": "msagtg1sggn73w",
       "styleCode": "BR-LH-001",
       "styleName": "Ivory Silk Lehenga Set",
       "category": "Bridal",
@@ -431,8 +413,8 @@
       ]
     },
     {
-      "id": "msa2kio2krqnqy",
-      "poId": "msa2kio27u2w8e",
+      "id": "msagtg1sv6svmh",
+      "poId": "msagtg1sggn73w",
       "styleCode": "BR-SA-001",
       "styleName": "Ivory Silk Saree Set",
       "category": "Bridal",
@@ -458,8 +440,8 @@
       ]
     },
     {
-      "id": "msa2kio22pikk4",
-      "poId": "msa2kio27u2w8e",
+      "id": "msagtg1squbd06",
+      "poId": "msagtg1sggn73w",
       "styleCode": "CW-GW-001",
       "styleName": "Black Organza Gown",
       "category": "Cocktail Wear",
@@ -485,8 +467,8 @@
       ]
     },
     {
-      "id": "msa2kio27kjvje",
-      "poId": "msa2kio27u2w8e",
+      "id": "msagtg1susldt3",
+      "poId": "msagtg1sggn73w",
       "styleCode": "CW-SH-001",
       "styleName": "Teal Sharara Set",
       "category": "Cocktail Wear",
@@ -512,8 +494,8 @@
       ]
     },
     {
-      "id": "msa2kio2312n9x",
-      "poId": "msa2kio27u2w8e",
+      "id": "msagtg1shvc3ej",
+      "poId": "msagtg1sggn73w",
       "styleCode": "CW-GW-002",
       "styleName": "Maroon Velvet Gown",
       "category": "Cocktail Wear",
