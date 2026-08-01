@@ -20,7 +20,8 @@ export function ToastProvider({ children }) {
       const toast = { id, message, tone, ...opts }
       setToasts((t) => [...t, toast])
       if (!opts.undo) {
-        timers.current[id] = setTimeout(() => dismiss(id), tone === 'danger' ? 6000 : 3500)
+        const hold = opts.action ? 10000 : tone === 'danger' ? 6000 : 3500
+        timers.current[id] = setTimeout(() => dismiss(id), hold)
       }
     },
     [dismiss]
@@ -31,12 +32,17 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toast-stack" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.tone} ${t.undo ? 'toast-undo' : ''}`} onClick={() => !t.undo && dismiss(t.id)}>
+          <div key={t.id} className={`toast toast-${t.tone} ${t.undo ? 'toast-undo' : ''}`} onClick={() => !t.undo && !t.action && dismiss(t.id)}>
             <span>{t.message}</span>
             {t.undo && (
               <button className="toast-undo-btn" onClick={(e) => { e.stopPropagation(); t.onUndo(); dismiss(t.id) }}>
                 Undo
               </button>
+            )}
+            {t.action && (
+              <a className="toast-action" href={t.action.href} target="_blank" rel="noreferrer" onClick={(e) => { e.stopPropagation(); dismiss(t.id) }}>
+                {t.action.label} ↗
+              </a>
             )}
           </div>
         ))}

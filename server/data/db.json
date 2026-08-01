@@ -1,25 +1,25 @@
 {
   "retailers": [
     {
-      "id": "ms96l52ho3yjcx",
+      "id": "msa0m208ias1g3",
       "name": "The Wedding House",
       "city": "New Delhi",
       "contact": "+91 98xxx 10001"
     },
     {
-      "id": "ms96l52hc52lx5",
+      "id": "msa0m208pc7fr0",
       "name": "Bridal Atelier Store",
       "city": "Mumbai",
       "contact": "+91 98xxx 10002"
     },
     {
-      "id": "ms96l52hedy50r",
+      "id": "msa0m208xpf3uy",
       "name": "Ethnic Couture Boutique",
       "city": "Kolkata",
       "contact": "+91 98xxx 10003"
     },
     {
-      "id": "ms96l52h8vsyh8",
+      "id": "msa0m208koixng",
       "name": "Royal Occasions",
       "city": "Jaipur",
       "contact": "+91 98xxx 10004"
@@ -27,35 +27,35 @@
   ],
   "vendors": [
     {
-      "id": "ms96l52h6b5qjc",
+      "id": "msa0m208lo7ug3",
       "name": "Meher Embroidery House",
       "type": "Embroidery-Kolkata",
       "location": "Kolkata",
       "contact": "meher@example.com"
     },
     {
-      "id": "ms96l52hlov9q4",
+      "id": "msa0m208qms57w",
       "name": "Zari & Thread Studio",
       "type": "Embroidery-Mumbai",
       "location": "Mumbai",
       "contact": "zari@example.com"
     },
     {
-      "id": "ms96l52hog3wp8",
+      "id": "msa0m208bwlakp",
       "name": "Banaras Silk Traders",
       "type": "Fabric",
       "location": "Varanasi",
       "contact": "banaras@example.com"
     },
     {
-      "id": "ms96l52h9ixkyr",
+      "id": "msa0m20809yxcs",
       "name": "Trim & Beads Supply Co.",
       "type": "Trims",
       "location": "Mumbai",
       "contact": "trims@example.com"
     },
     {
-      "id": "ms96l52hmh119o",
+      "id": "msa0m208dk2io0",
       "name": "Heritage Tailoring Unit",
       "type": "Stitching",
       "location": "Jaipur",
@@ -64,7 +64,7 @@
   ],
   "fabrics": [
     {
-      "id": "ms96l52hr5d6o0",
+      "id": "msa0m208yl4bxy",
       "name": "Banarasi Silk",
       "type": "Silk",
       "stock": 240,
@@ -76,7 +76,7 @@
       "lowStockLevel": 80
     },
     {
-      "id": "ms96l52hw8hpgy",
+      "id": "msa0m2084z65fw",
       "name": "Raw Silk Dupion",
       "type": "Silk",
       "stock": 180,
@@ -88,7 +88,7 @@
       "lowStockLevel": 60
     },
     {
-      "id": "ms96l52h1f7ihm",
+      "id": "msa0m208dsfhdx",
       "name": "Organza",
       "type": "Georgette",
       "stock": 320,
@@ -100,7 +100,7 @@
       "lowStockLevel": 100
     },
     {
-      "id": "ms96l52hbbs9f5",
+      "id": "msa0m208mvpg7p",
       "name": "Zari Border (gold)",
       "type": "Trim",
       "stock": 60,
@@ -112,7 +112,7 @@
       "lowStockLevel": 25
     },
     {
-      "id": "ms96l52hq7t867",
+      "id": "msa0m208c9ndw1",
       "name": "Pearl Buttons",
       "type": "Trim",
       "stock": 420,
@@ -126,7 +126,7 @@
   ],
   "readyStock": [
     {
-      "id": "ms96l52hdaii75",
+      "id": "msa0m2087xdlwm",
       "name": "Red Banarasi Lehenga Set",
       "category": "Bridal",
       "subCategory": "Lehenga Set",
@@ -135,10 +135,13 @@
       "sellingPrice": 95000,
       "lowStockLevel": 2,
       "location": "Showroom",
-      "notes": "Heavy zardozi"
+      "notes": "Heavy zardozi",
+      "styleCode": "LEH-101",
+      "color": "Red",
+      "size": "Free"
     },
     {
-      "id": "ms96l52ha0u1rq",
+      "id": "msa0m208u4g6pr",
       "name": "Ivory Raw Silk Anarkali",
       "category": "Occasions",
       "subCategory": "Anarkali",
@@ -147,10 +150,13 @@
       "sellingPrice": 42000,
       "lowStockLevel": 3,
       "location": "Store",
-      "notes": ""
+      "notes": "",
+      "styleCode": "AN-310",
+      "color": "Ivory",
+      "size": "M"
     },
     {
-      "id": "ms96l52hgjwojf",
+      "id": "msa0m208m19mfi",
       "name": "Gold Organza Sharara Set",
       "category": "Occasions",
       "subCategory": "Sharara Set",
@@ -159,10 +165,13 @@
       "sellingPrice": 48000,
       "lowStockLevel": 2,
       "location": "Store",
-      "notes": ""
+      "notes": "",
+      "styleCode": "SH-208",
+      "color": "Gold",
+      "size": "Free"
     },
     {
-      "id": "ms96l52h1jt2mc",
+      "id": "msa0m2088bwph1",
       "name": "Emerald Dupion Gown",
       "category": "Cocktail Wear",
       "subCategory": "Gown",
@@ -171,10 +180,13 @@
       "sellingPrice": 65000,
       "lowStockLevel": 2,
       "location": "Showroom",
-      "notes": ""
+      "notes": "",
+      "styleCode": "GW-115",
+      "color": "Emerald",
+      "size": "M"
     },
     {
-      "id": "ms96l52hvl7z8d",
+      "id": "msa0m208vu58t3",
       "name": "Pastel Kurta Set",
       "category": "PreT",
       "subCategory": "Kurta Set",
@@ -183,10 +195,13 @@
       "sellingPrice": 15000,
       "lowStockLevel": 5,
       "location": "Store",
-      "notes": ""
+      "notes": "",
+      "styleCode": "KU-422",
+      "color": "Pastel Pink",
+      "size": "M"
     },
     {
-      "id": "ms96l52hqgbcal",
+      "id": "msa0m208d4fanr",
       "name": "Black Bandhgala Suit",
       "category": "Menswear",
       "subCategory": "Bandhgala",
@@ -195,59 +210,62 @@
       "sellingPrice": 35000,
       "lowStockLevel": 2,
       "location": "Store",
-      "notes": ""
+      "notes": "",
+      "styleCode": "BD-506",
+      "color": "Navy",
+      "size": "L"
     }
   ],
   "purchaseOrders": [
     {
-      "id": "ms96l52hjlr2zi",
+      "id": "msa0m208m3frjg",
       "poNumber": "PO-2401",
-      "retailerId": "ms96l52ho3yjcx",
-      "orderDate": "2026-07-19",
-      "deliveryDate": "2026-08-25",
+      "retailerId": "msa0m208ias1g3",
+      "orderDate": "2026-07-20",
+      "deliveryDate": "2026-08-26",
       "status": "In Production",
       "value": 1850000,
       "notes": "Bridal trunk show order",
-      "createdAt": "2026-07-19"
+      "createdAt": "2026-07-20"
     },
     {
-      "id": "ms96l52hsr2rsp",
+      "id": "msa0m20983eljt",
       "poNumber": "PO-2402",
-      "retailerId": "ms96l52hc52lx5",
-      "orderDate": "2026-07-11",
-      "deliveryDate": "2026-08-09",
+      "retailerId": "msa0m208pc7fr0",
+      "orderDate": "2026-07-12",
+      "deliveryDate": "2026-08-10",
       "status": "In Production",
       "value": 960000,
       "notes": "Occasion wear capsule",
-      "createdAt": "2026-07-11"
+      "createdAt": "2026-07-12"
     },
     {
-      "id": "ms96l52h2q3vo8",
+      "id": "msa0m20967jenr",
       "poNumber": "PO-2403",
-      "retailerId": "ms96l52hedy50r",
-      "orderDate": "2026-07-01",
-      "deliveryDate": "2026-08-03",
+      "retailerId": "msa0m208xpf3uy",
+      "orderDate": "2026-07-02",
+      "deliveryDate": "2026-08-04",
       "status": "Dispatched",
       "value": 1240000,
       "notes": "Festive collection early dispatch",
-      "createdAt": "2026-07-01"
+      "createdAt": "2026-07-02"
     },
     {
-      "id": "ms96l52h0qyusg",
+      "id": "msa0m209x5fnvj",
       "poNumber": "PO-2404",
-      "retailerId": "ms96l52h8vsyh8",
-      "orderDate": "2026-07-25",
-      "deliveryDate": "2026-09-09",
+      "retailerId": "msa0m208koixng",
+      "orderDate": "2026-07-26",
+      "deliveryDate": "2026-09-10",
       "status": "Confirmed",
       "value": 720000,
       "notes": "Repeat order",
-      "createdAt": "2026-07-25"
+      "createdAt": "2026-07-26"
     }
   ],
   "styles": [
     {
-      "id": "ms96l52h30zd3s",
-      "poId": "ms96l52hjlr2zi",
+      "id": "msa0m209kc6gwz",
+      "poId": "msa0m208m3frjg",
       "styleCode": "BR-2412",
       "styleName": "Red Banarasi Lehenga Set",
       "category": "Bridal",
@@ -257,13 +275,13 @@
       "fabric": "Banarasi Silk",
       "trim": "Zari Border (gold)",
       "stage": "Embroidery-Kolkata",
-      "stageEnteredAt": "2026-07-27",
+      "stageEnteredAt": "2026-07-28",
       "qtyDispatched": 0,
       "notes": "Heavy zardozi on lehenga + dupatta",
-      "createdAt": "2026-07-19",
+      "createdAt": "2026-07-20",
       "history": [
         {
-          "at": "2026-07-27",
+          "at": "2026-07-28",
           "from": null,
           "to": "Embroidery-Kolkata",
           "note": "Order created"
@@ -271,8 +289,8 @@
       ]
     },
     {
-      "id": "ms96l52hyobvar",
-      "poId": "ms96l52hjlr2zi",
+      "id": "msa0m209k2cra0",
+      "poId": "msa0m208m3frjg",
       "styleCode": "BR-2415",
       "styleName": "Ivory Raw Silk Anarkali",
       "category": "Occasions",
@@ -282,13 +300,13 @@
       "fabric": "Raw Silk Dupion",
       "trim": "Pearl Buttons",
       "stage": "Cutting",
-      "stageEnteredAt": "2026-07-29",
+      "stageEnteredAt": "2026-07-30",
       "qtyDispatched": 0,
       "notes": "Awaiting Master fit approval",
-      "createdAt": "2026-07-19",
+      "createdAt": "2026-07-20",
       "history": [
         {
-          "at": "2026-07-29",
+          "at": "2026-07-30",
           "from": null,
           "to": "Cutting",
           "note": "Order created"
@@ -296,8 +314,8 @@
       ]
     },
     {
-      "id": "ms96l52hmr36xq",
-      "poId": "ms96l52hsr2rsp",
+      "id": "msa0m209a32zsr",
+      "poId": "msa0m20983eljt",
       "styleCode": "BR-2411",
       "styleName": "Gold Organza Sharara",
       "category": "Occasions",
@@ -307,13 +325,13 @@
       "fabric": "Organza",
       "trim": "Zari Border (gold)",
       "stage": "Stitching",
-      "stageEnteredAt": "2026-07-28",
+      "stageEnteredAt": "2026-07-29",
       "qtyDispatched": 0,
       "notes": "Split across two stitchers",
-      "createdAt": "2026-07-11",
+      "createdAt": "2026-07-12",
       "history": [
         {
-          "at": "2026-07-28",
+          "at": "2026-07-29",
           "from": null,
           "to": "Stitching",
           "note": "Order created"
@@ -321,8 +339,8 @@
       ]
     },
     {
-      "id": "ms96l52h17poz0",
-      "poId": "ms96l52hsr2rsp",
+      "id": "msa0m209506by9",
+      "poId": "msa0m20983eljt",
       "styleCode": "BR-2408",
       "styleName": "Maroon Velvet Jacket Set",
       "category": "Bridal",
@@ -332,13 +350,13 @@
       "fabric": "Banarasi Silk",
       "trim": "Zari Border (gold)",
       "stage": "QC",
-      "stageEnteredAt": "2026-07-30",
+      "stageEnteredAt": "2026-07-31",
       "qtyDispatched": 0,
       "notes": "Final QC sign-off before packing",
-      "createdAt": "2026-07-01",
+      "createdAt": "2026-07-02",
       "history": [
         {
-          "at": "2026-07-30",
+          "at": "2026-07-31",
           "from": null,
           "to": "QC",
           "note": "Order created"
@@ -346,8 +364,8 @@
       ]
     },
     {
-      "id": "ms96l52h3n8q6f",
-      "poId": "ms96l52h2q3vo8",
+      "id": "msa0m20996co43",
+      "poId": "msa0m20967jenr",
       "styleCode": "BR-2406",
       "styleName": "Emerald Dupion Gown",
       "category": "Occasions",
@@ -357,13 +375,13 @@
       "fabric": "Raw Silk Dupion",
       "trim": "Pearl Buttons",
       "stage": "Dispatched",
-      "stageEnteredAt": "2026-07-29",
+      "stageEnteredAt": "2026-07-30",
       "qtyDispatched": 10,
       "notes": "Dispatched ahead of festival window",
-      "createdAt": "2026-07-01",
+      "createdAt": "2026-07-02",
       "history": [
         {
-          "at": "2026-07-29",
+          "at": "2026-07-30",
           "from": null,
           "to": "Dispatched",
           "note": "Order created"
@@ -371,8 +389,8 @@
       ]
     },
     {
-      "id": "ms96l52hw8n6xq",
-      "poId": "ms96l52h0qyusg",
+      "id": "msa0m209c5l42n",
+      "poId": "msa0m209x5fnvj",
       "styleCode": "BR-2420",
       "styleName": "Pastel Organza Saree Set",
       "category": "Occasions",
@@ -382,18 +400,29 @@
       "fabric": "Organza",
       "trim": "Zari Border (gold)",
       "stage": "Sampling",
-      "stageEnteredAt": "2026-07-28",
+      "stageEnteredAt": "2026-07-29",
       "qtyDispatched": 0,
       "notes": "Sample pending retailer approval",
-      "createdAt": "2026-07-25",
+      "createdAt": "2026-07-26",
       "history": [
         {
-          "at": "2026-07-28",
+          "at": "2026-07-29",
           "from": null,
           "to": "Sampling",
           "note": "Order created"
         }
       ]
+    }
+  ],
+  "auditLog": [
+    {
+      "id": "msa1ew6oi5chuu",
+      "user": "local",
+      "action": "insert",
+      "entity": "readyStock",
+      "entityId": "msa1ew6o8ojd5h",
+      "detail": "Test Item",
+      "createdAt": "2026-08-01T07:15:51.792Z"
     }
   ]
 }

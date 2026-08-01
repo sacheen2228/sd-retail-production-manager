@@ -14,7 +14,7 @@ const EMPTY = {
 }
 
 export default function Partners({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const { vendors, retailers, fabrics } = db
   const [tab, setTab] = useState('vendors')
   const [editing, setEditing] = useState(null)
@@ -76,7 +76,7 @@ export default function Partners({ ctx }) {
             </button>
           ))}
         </div>
-        <Btn onClick={() => setEditing({ ...EMPTY[tab] })}>+ Add {tab === 'vendors' ? 'Vendor' : tab === 'retailers' ? 'Retailer' : 'Fabric/Trim'}</Btn>
+        {can('create') && <Btn onClick={() => setEditing({ ...EMPTY[tab] })}>+ Add {tab === 'vendors' ? 'Vendor' : tab === 'retailers' ? 'Retailer' : 'Fabric/Trim'}</Btn>}
       </div>
 
       {tab === 'vendors' && (
@@ -102,9 +102,11 @@ export default function Partners({ ctx }) {
                     <td>{v.location}</td>
                     <td>{v.contact}</td>
                     <td>
-                      <Btn tone="ghost" onClick={() => setEditing({ ...v })}>
-                        Edit
-                      </Btn>
+                      {can('edit') && (
+                        <Btn tone="ghost" onClick={() => setEditing({ ...v })}>
+                          Edit
+                        </Btn>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -135,9 +137,11 @@ export default function Partners({ ctx }) {
                     <td>{r.city}</td>
                     <td>{r.contact}</td>
                     <td>
-                      <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
-                        Edit
-                      </Btn>
+                      {can('edit') && (
+                        <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
+                          Edit
+                        </Btn>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -178,9 +182,11 @@ export default function Partners({ ctx }) {
                     <td>{f.vendor || '-'}</td>
                     <td>{f.leadTimeDays}d</td>
                     <td>
-                      <Btn tone="ghost" onClick={() => setEditing({ ...f })}>
-                        Edit
-                      </Btn>
+                      {can('edit') && (
+                        <Btn tone="ghost" onClick={() => setEditing({ ...f })}>
+                          Edit
+                        </Btn>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -235,7 +241,7 @@ export default function Partners({ ctx }) {
         onClose={() => setEditing(null)}
         footer={
           <>
-            {editing?.id && (
+            {editing?.id && can('delete') && (
               <Btn tone="danger-ghost" onClick={remove}>
                 Delete
               </Btn>

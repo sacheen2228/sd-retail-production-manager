@@ -37,8 +37,51 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
 })
 
+// Keeps the (potentially large) audit trail out of the main data payload.
 app.get('/api/data', (_req, res) => {
-  res.json(db)
+  const { auditLog, ...rest } = db
+  res.json(rest)
+})
+
+function audit(collection, item, action) {
+  db.auditLog = db.auditLog || []
+  const label = item?.name || item?.poNumber || item?.styleCode || item?.styleName || item?.id || ''
+  db.auditLog.unshift({
+    id: uid(),
+    user: 'local',
+    action,
+    entity: collection,
+    entityId: item?.id || '',
+    detail: label,
+    createdAt: new Date().toISOString()
+  })
+  if (db.auditLog.length > 2000) db.auditLog = db.auditLog.slice(0, 2000)
+}
+
+app.get('/api/backup', (_req, res) => {
+  const { auditLog, ...rest } = db
+  res.json(rest)
+})
+
+app.post('/api/backup/restore', (req, res) => {
+  const body = req.body || {}
+  const order = ['retailers', 'vendors', 'fabrics', 'readyStock', 'purchaseOrders', 'styles']
+  for (const c of order) {
+    if (!Array.isArray(body[c])) {
+      return res.status(400).json({ error: `Backup file is missing the "${c}" collection` })
+    }
+  }
+  order.forEach((c) => {
+    db[c] = body[c]
+  })
+  saveDB(db)
+  audit('backup', { id: '', name: 'Restore performed' }, 'update')
+  saveDB(db)
+  res.json({ ok: true, counts: Object.fromEntries(order.map((c) => [c, db[c].length])) })
+})
+
+app.get('/api/audit', (_req, res) => {
+  res.json((db.auditLog || []).slice(0, 500))
 })
 
 app.get('/api/:collection', (req, res) => {
@@ -57,6 +100,7 @@ app.post('/api/:collection', (req, res) => {
     item.history = [{ at: todayStr(), from: null, to: stage, note: 'Order created' }]
   }
   db[collection].push(item)
+  audit(collection, item, 'insert')
   saveDB(db)
   res.status(201).json(item)
 })
@@ -86,6 +130,7 @@ app.put('/api/:collection/:id', (req, res) => {
     }
   }
   db[collection][idx] = next
+  audit(collection, next, 'update')
   saveDB(db)
   res.json(next)
 })
@@ -95,7 +140,8 @@ app.delete('/api/:collection/:id', (req, res) => {
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
   const idx = db[collection].findIndex((i) => i.id === id)
   if (idx === -1) return res.status(404).json({ error: 'Not found' })
-  db[collection].splice(idx, 1)
+  const removed = db[collection].splice(idx, 1)[0]
+  audit(collection, removed, 'delete')
   saveDB(db)
   res.json({ ok: true })
 })
@@ -103,6 +149,9 @@ app.delete('/api/:collection/:id', (req, res) => {
 const normalizeKey = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const HEADER_MAP = {
   name: ['name', 'item', 'itemname', 'product', 'productname', 'style', 'stylename', 'garment'],
+  styleCode: ['stylecode', 'style', 'styleid', 'code', 'sku', 'itemcode', 'styleno'],
+  color: ['color', 'colour', 'shade'],
+  size: ['size', 'sizes', 'garmentsize', 'fit'],
   category: ['category', 'cat'],
   subCategory: ['subcategory', 'subcat', 'sub', 'category2', 'subcategory2'],
   quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'pieces', 'pcs', 'nos'],
@@ -168,6 +217,7 @@ app.post('/api/readyStock/upload', (req, res) => {
         created++
       }
     }
+    audit('readyStock', { id: '', name: `Excel upload (${created} created, ${updated} updated, ${skipped} skipped)` }, 'update')
     saveDB(db)
     const fileHint = filename ? ` (${filename})` : ''
     res.json({ ok: true, created, updated, skipped, message: `Upload complete${fileHint}: ${created} created, ${updated} updated, ${skipped} rows skipped.` })

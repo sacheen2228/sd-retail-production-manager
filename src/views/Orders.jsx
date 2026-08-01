@@ -40,7 +40,7 @@ const emptyLine = () => ({
 const EMPTY_PO = { poNumber: '', retailerId: '', orderDate: '', deliveryDate: '', status: 'Confirmed', value: 0, notes: '' }
 
 export default function Orders({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const { purchaseOrders, retailers, styles } = db
   const { push } = useToast()
   const { confirm, node: confirmNode } = useConfirm()
@@ -188,7 +188,7 @@ export default function Orders({ ctx }) {
             </button>
           ))}
         </div>
-        <Btn onClick={openNew}>+ New Purchase Order</Btn>
+        {can('create') && <Btn onClick={openNew}>+ New Purchase Order</Btn>}
       </div>
 
       <Card>
@@ -222,9 +222,11 @@ export default function Orders({ ctx }) {
                       <td>{styleCount}</td>
                       <td><StageBadge stage={o.status} /></td>
                       <td>
-                        <Btn tone="ghost" onClick={(e) => { e.stopPropagation(); openEdit(o) }}>
-                          Edit
-                        </Btn>
+                        {can('edit') && (
+                          <Btn tone="ghost" onClick={(e) => { e.stopPropagation(); openEdit(o) }}>
+                            Edit
+                          </Btn>
+                        )}
                       </td>
                     </tr>
                     {expanded === o.id && (
@@ -281,7 +283,7 @@ export default function Orders({ ctx }) {
         wide
         footer={
           <>
-            {editing?.id && (
+            {editing?.id && can('delete') && (
               <Btn tone="danger-ghost" onClick={removePO}>
                 Delete PO
               </Btn>

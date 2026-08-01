@@ -40,12 +40,12 @@ export function seedData() {
       { id: uid(), name: 'Pearl Buttons', type: 'Trim', stock: 420, uom: 'pcs', vendor: 'Trim & Beads Supply Co.', leadTimeDays: 5, costPrice: 12, consumption: 6, lowStockLevel: 100 }
     ],
     readyStock: [
-      { id: uid(), name: 'Red Banarasi Lehenga Set', category: 'Bridal', subCategory: 'Lehenga Set', quantity: 6, costPrice: 45000, sellingPrice: 95000, lowStockLevel: 2, location: 'Showroom', notes: 'Heavy zardozi' },
-      { id: uid(), name: 'Ivory Raw Silk Anarkali', category: 'Occasions', subCategory: 'Anarkali', quantity: 8, costPrice: 20000, sellingPrice: 42000, lowStockLevel: 3, location: 'Store', notes: '' },
-      { id: uid(), name: 'Gold Organza Sharara Set', category: 'Occasions', subCategory: 'Sharara Set', quantity: 4, costPrice: 22000, sellingPrice: 48000, lowStockLevel: 2, location: 'Store', notes: '' },
-      { id: uid(), name: 'Emerald Dupion Gown', category: 'Cocktail Wear', subCategory: 'Gown', quantity: 3, costPrice: 30000, sellingPrice: 65000, lowStockLevel: 2, location: 'Showroom', notes: '' },
-      { id: uid(), name: 'Pastel Kurta Set', category: 'PreT', subCategory: 'Kurta Set', quantity: 15, costPrice: 8000, sellingPrice: 15000, lowStockLevel: 5, location: 'Store', notes: '' },
-      { id: uid(), name: 'Black Bandhgala Suit', category: 'Menswear', subCategory: 'Bandhgala', quantity: 5, costPrice: 18000, sellingPrice: 35000, lowStockLevel: 2, location: 'Store', notes: '' }
+      { id: uid(), name: 'Red Banarasi Lehenga Set', styleCode: 'LEH-101', color: 'Red', size: 'Free', category: 'Bridal', subCategory: 'Lehenga Set', quantity: 6, costPrice: 45000, sellingPrice: 95000, lowStockLevel: 2, location: 'Showroom', notes: 'Heavy zardozi' },
+      { id: uid(), name: 'Ivory Raw Silk Anarkali', styleCode: 'AN-310', color: 'Ivory', size: 'M', category: 'Occasions', subCategory: 'Anarkali', quantity: 8, costPrice: 20000, sellingPrice: 42000, lowStockLevel: 3, location: 'Store', notes: '' },
+      { id: uid(), name: 'Gold Organza Sharara Set', styleCode: 'SH-208', color: 'Gold', size: 'Free', category: 'Occasions', subCategory: 'Sharara Set', quantity: 4, costPrice: 22000, sellingPrice: 48000, lowStockLevel: 2, location: 'Store', notes: '' },
+      { id: uid(), name: 'Emerald Dupion Gown', styleCode: 'GW-115', color: 'Emerald', size: 'M', category: 'Cocktail Wear', subCategory: 'Gown', quantity: 3, costPrice: 30000, sellingPrice: 65000, lowStockLevel: 2, location: 'Showroom', notes: '' },
+      { id: uid(), name: 'Pastel Kurta Set', styleCode: 'KU-422', color: 'Pastel Pink', size: 'M', category: 'PreT', subCategory: 'Kurta Set', quantity: 15, costPrice: 8000, sellingPrice: 15000, lowStockLevel: 5, location: 'Store', notes: '' },
+      { id: uid(), name: 'Black Bandhgala Suit', styleCode: 'BD-506', color: 'Navy', size: 'L', category: 'Menswear', subCategory: 'Bandhgala', quantity: 5, costPrice: 18000, sellingPrice: 35000, lowStockLevel: 2, location: 'Store', notes: '' }
     ],
     purchaseOrders: [
       {
@@ -220,6 +220,7 @@ export function seedData() {
 }
 
 function normalize(db) {
+  if (!Array.isArray(db.auditLog)) db.auditLog = []
   db.styles.forEach((s) => {
     if (!Array.isArray(s.history)) {
       s.history = [
@@ -239,6 +240,9 @@ function normalize(db) {
   })
   if (!Array.isArray(db.readyStock)) db.readyStock = []
   db.readyStock.forEach((r) => {
+    if (r.styleCode === undefined) r.styleCode = ''
+    if (r.color === undefined) r.color = ''
+    if (r.size === undefined) r.size = ''
     if (r.lowStockLevel === undefined) r.lowStockLevel = 2
     if (r.costPrice === undefined) r.costPrice = 0
     if (r.sellingPrice === undefined) r.sellingPrice = 0

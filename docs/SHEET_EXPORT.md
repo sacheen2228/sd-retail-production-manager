@@ -37,7 +37,7 @@ function doPost(e) {
       target.getRange(target.getLastRow() + 1, 1, s.rows.length, s.rows[0].length).setValues(s.rows)
       written += s.rows.length
     }
-    return respond({ ok: true, count: written, sheets: list.length })
+    return respond({ ok: true, count: written, sheets: list.length, spreadsheet: ss.getUrl() })
   } catch (err) {
     return respond({ ok: false, error: String(err) })
   }
@@ -79,7 +79,9 @@ If you use the optional token: open the Apps Script editor → **Project Setting
 - **Stock Report** toolbar: **→ Sheet** appends the filtered ready-stock rows to the **Ready Stock** tab.
 - **Reports → WIP** card: **→ Sheet** appends the WIP rows to the **WIP Report** tab.
 
-A toast confirms how many rows were written. If the button shows a warning toast, the URL env var isn't set yet.
+A toast confirms how many rows were written. Because the script returns the sheet's URL, the toast now includes an **Open Sheet ↗** button that jumps straight to your Google Sheet. If the button shows a warning toast instead, the `VITE_GOOGLE_SHEET_WEB_APP_URL` env var isn't set yet.
+
+> **Already deployed the script?** The **Open Sheet** button only appears when the Apps Script returns `spreadsheet: ss.getUrl()`. Update the script to the version above (which includes that line), then **Deploy → Manage deployments → ✎ Edit → New version** to redeploy.
 
 ## Notes
 

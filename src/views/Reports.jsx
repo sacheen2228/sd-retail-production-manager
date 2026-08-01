@@ -59,7 +59,10 @@ export default function Reports({ ctx }) {
     if (!wipExport) return
     setExporting(true)
     exportToSheet({ sheet: 'WIP Report', ...wipExport })
-      .then((res) => push(`Exported ${res.count} rows to Google Sheets`, 'success'))
+      .then((res) => {
+        const action = res.spreadsheet ? { label: 'Open Sheet', href: res.spreadsheet } : null
+        push(`Exported ${res.count} rows to Google Sheets`, 'success', action ? { action } : {})
+      })
       .catch((e) => push(e.message, 'danger'))
       .finally(() => setExporting(false))
   }

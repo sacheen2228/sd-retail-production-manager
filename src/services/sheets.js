@@ -53,8 +53,8 @@ function buildAllSheets(db) {
     },
     {
       name: 'Ready Stock',
-      cols: ['Name', 'Category', 'Sub-category', 'Quantity', 'Cost Price', 'Selling Price', 'Low Stock Level', 'Location'],
-      rows: (db.readyStock || []).map((r) => [r.name, r.category, r.subCategory, num(r.quantity), num(r.costPrice), num(r.sellingPrice), num(r.lowStockLevel), r.location])
+      cols: ['Sr No', 'Name', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Quantity', 'Cost Price', 'Selling Price', 'Low Stock Level', 'Location'],
+      rows: (db.readyStock || []).map((r, i) => [i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, num(r.quantity), num(r.costPrice), num(r.sellingPrice), num(r.lowStockLevel), r.location])
     },
     {
       name: 'Purchase Orders',

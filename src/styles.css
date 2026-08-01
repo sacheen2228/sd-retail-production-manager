@@ -1937,6 +1937,22 @@ select.input {
   flex-shrink: 0;
 }
 
+.toast-action {
+  padding: 4px 10px;
+  background: var(--gold);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.toast-action:hover {
+  filter: brightness(0.95);
+}
+
 /* ---------- Keyboard Shortcut Hints ---------- */
 .nav-item[title] {
   position: relative;

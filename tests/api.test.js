@@ -68,6 +68,24 @@ describe('data layer routing & mapping', () => {
     expect(updated.history).toHaveLength(1)
   })
 
+  it('maps ready stock style/color/size fields both ways', async () => {
+    const api = await loadApi()
+    const created = await api.post('/api/readyStock', {
+      name: 'Test Suit',
+      styleCode: 'SU-999',
+      color: 'Teal',
+      size: 'M',
+      quantity: 3
+    })
+    expect(created.styleCode).toBe('SU-999')
+    expect(created.color).toBe('Teal')
+    expect(created.size).toBe('M')
+    const db = await api.get('/api/data')
+    const item = db.readyStock.find((i) => i.id === created.id)
+    expect(item.styleCode).toBe('SU-999')
+    expect(item.size).toBe('M')
+  })
+
   it('coerces numeric strings and empties foreign keys', async () => {
     const api = await loadApi()
     const po = await api.post('/api/purchaseOrders', {
@@ -95,5 +113,64 @@ describe('data layer routing & mapping', () => {
   it('rejects unknown routes', async () => {
     const api = await loadApi()
     await expect(api.get('/api/nonsense')).rejects.toThrow()
+  })
+})
+
+describe('profiles & roles', () => {
+  it('lists and updates a user profile role', async () => {
+    fake._seed('profiles', [{ id: 'u-1', email: 'a@b.com', role: 'admin' }])
+    const api = await loadApi()
+    const profiles = await api.get('/api/profiles')
+    expect(profiles).toHaveLength(1)
+    expect(profiles[0].role).toBe('admin')
+    const updated = await api.put('/api/profiles/u-1', { role: 'manager' })
+    expect(updated.role).toBe('manager')
+  })
+})
+
+describe('backup & restore', () => {
+  it('exports a full backup in app shape', async () => {
+    fake._seed('retailers', [{ name: 'AZA', city: 'Mumbai', contact: '' }])
+    fake._seed('styles', [{ po_id: null, style_code: 'BR-1', stage: 'Sampling', history: [] }])
+    const api = await loadApi()
+    const backup = await api.get('/api/backup')
+    expect(backup.retailers[0].name).toBe('AZA')
+    expect(backup.styles[0].styleCode).toBe('BR-1')
+  })
+
+  it('restores a backup by replacing all collections', async () => {
+    fake._seed('retailers', [{ name: 'Old', city: 'Delhi', contact: '' }])
+    const api = await loadApi()
+    const res = await api.post('/api/backup/restore', {
+      retailers: [{ name: 'New', city: 'Mumbai', contact: '' }],
+      vendors: [],
+      fabrics: [],
+      readyStock: [],
+      purchaseOrders: [],
+      styles: []
+    })
+    expect(res.ok).toBe(true)
+    expect(res.counts.retailers).toBe(1)
+    const db = await api.get('/api/data')
+    expect(db.retailers[0].name).toBe('New')
+  })
+
+  it('rejects a malformed backup', async () => {
+    const api = await loadApi()
+    await expect(api.post('/api/backup/restore', { retailers: [] })).rejects.toThrow()
+  })
+})
+
+describe('audit log', () => {
+  it('lists audit entries newest first', async () => {
+    fake._seed('audit_log', [
+      { action: 'update', entity: 'styles', entity_id: 's-1', created_at: '2026-07-01T10:00:00Z' },
+      { action: 'insert', entity: 'purchase_orders', entity_id: 'po-1', created_at: '2026-07-02T10:00:00Z' }
+    ])
+    const api = await loadApi()
+    const entries = await api.get('/api/audit')
+    expect(entries).toHaveLength(2)
+    expect(entries[0].action).toBe('update')
+    expect(entries[0].entity).toBe('styles')
   })
 })

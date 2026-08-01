@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabaseClient.js'
+import { api } from '../api.js'
 
 export const authEnabled = supabaseClient.USE_SUPABASE
 
@@ -31,6 +32,25 @@ export async function signUp(email, password) {
 export async function signOut() {
   if (!supabaseClient.supabase) return
   await supabaseClient.supabase.auth.signOut()
+}
+
+export async function getUserRole() {
+  if (!authEnabled) return 'admin'
+  const user = await getCurrentUser()
+  if (!user) return null
+  const { data, error } = await supabaseClient.supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (error) throw new Error(error.message)
+  return data?.role || 'viewer'
+}
+
+export async function setUserRole(userId, role) {
+  if (!authEnabled) throw new Error('Roles require the Supabase backend')
+  return api.put('/api/profiles/' + userId, { role })
+}
+
+export async function listProfiles() {
+  if (!authEnabled) throw new Error('Roles require the Supabase backend')
+  return api.get('/api/profiles')
 }
 
 export function onAuthChange(cb) {

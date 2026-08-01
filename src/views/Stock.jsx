@@ -10,6 +10,9 @@ import { CATEGORIES, CATEGORY_NAMES } from '../lib.js'
 
 const EMPTY = {
   name: '',
+  styleCode: '',
+  color: '',
+  size: '',
   category: 'Occasions',
   subCategory: '',
   quantity: 0,
@@ -30,7 +33,7 @@ function statusFor(r) {
 }
 
 export default function Stock({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const items = db.readyStock || []
   const [editing, setEditing] = useState(null)
   const [addQty, setAddQty] = useState(null)
@@ -109,10 +112,10 @@ export default function Stock({ ctx }) {
   }
 
   const exportData = useMemo(() => {
-    const cols = ['Item', 'Category', 'Sub-category', 'Qty on Hand', 'Cost', 'Selling', 'Value', 'Status', 'Location']
-    const rows = list.map((r) => {
+    const cols = ['Sr No', 'Item', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Qty on Hand', 'Cost', 'Selling', 'Value', 'Status', 'Location']
+    const rows = list.map((r, i) => {
       const st = statusFor(r)
-      return [r.name, r.category, r.subCategory, r.quantity, r.costPrice, r.sellingPrice, (Number(r.costPrice) || 0) * (Number(r.quantity) || 0), st.label, r.location]
+      return [i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, r.quantity, r.costPrice, r.sellingPrice, (Number(r.costPrice) || 0) * (Number(r.quantity) || 0), st.label, r.location]
     })
     return { cols, rows }
   }, [list])
@@ -134,7 +137,10 @@ export default function Stock({ ctx }) {
   function exportSheet() {
     setExporting(true)
     exportToSheet({ sheet: 'Ready Stock', ...exportData })
-      .then((res) => push(`Exported ${res.count} rows to Google Sheets`, 'success'))
+      .then((res) => {
+        const action = res.spreadsheet ? { label: 'Open Sheet', href: res.spreadsheet } : null
+        push(`Exported ${res.count} rows to Google Sheets`, 'success', action ? { action } : {})
+      })
       .catch((e) => push(e.message, 'danger'))
       .finally(() => setExporting(false))
   }
@@ -186,12 +192,14 @@ export default function Stock({ ctx }) {
           <Btn tone="ghost" onClick={exportSheet} disabled={exporting || !exportData.rows.length}>
             {exporting ? 'Exporting…' : '→ Sheet'}
           </Btn>
-          <Btn tone="ghost" onClick={() => fileRef.current?.click()} disabled={uploading}>
-            {uploading ? 'Uploading…' : 'Upload Excel'}
-          </Btn>
+          {can('edit') && (
+            <Btn tone="ghost" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload Excel'}
+            </Btn>
+          )}
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={onFileSelected} />
         </div>
-        <Btn onClick={openNew}>+ Add Stock Item</Btn>
+        {can('create') && <Btn onClick={openNew}>+ Add Stock Item</Btn>}
       </div>
 
       {uploadMsg && (
@@ -207,7 +215,11 @@ export default function Stock({ ctx }) {
           <table className="table">
             <thead>
               <tr>
+                <th>Sr No</th>
                 <th>Item</th>
+                <th>Style Code</th>
+                <th>Color</th>
+                <th>Size</th>
                 <th>Category</th>
                 <th>Sub-category</th>
                 <th>Qty on Hand</th>
@@ -219,10 +231,11 @@ export default function Stock({ ctx }) {
               </tr>
             </thead>
             <tbody>
-              {list.map((r) => {
+              {list.map((r, i) => {
                 const st = statusFor(r)
                 return (
                   <tr key={r.id}>
+                    <td className="muted">{i + 1}</td>
                     <td className="strong">
                       <div className="style-cell">
                         {r.image && <img className="style-thumb" src={r.image} alt="" />}
@@ -232,6 +245,9 @@ export default function Stock({ ctx }) {
                         </div>
                       </div>
                     </td>
+                    <td>{r.styleCode || '-'}</td>
+                    <td>{r.color || '-'}</td>
+                    <td>{r.size || '-'}</td>
                     <td>{r.category}</td>
                     <td>{r.subCategory || '-'}</td>
                     <td className="strong">{r.quantity}</td>
@@ -240,12 +256,16 @@ export default function Stock({ ctx }) {
                     <td>{fmtMoney((Number(r.costPrice) || 0) * (Number(r.quantity) || 0))}</td>
                     <td><Badge tone={st.tone}>{st.label}</Badge></td>
                     <td className="row-actions">
-                      <Btn tone="success" onClick={() => setAddQty({ item: r, qty: '' })} title="Add stock on hand">
-                        + Stock
-                      </Btn>
-                      <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
-                        Edit
-                      </Btn>
+                      {can('edit') && (
+                        <>
+                          <Btn tone="success" onClick={() => setAddQty({ item: r, qty: '' })} title="Add stock on hand">
+                            + Stock
+                          </Btn>
+                          <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
+                            Edit
+                          </Btn>
+                        </>
+                      )}
                     </td>
                   </tr>
                 )
@@ -261,7 +281,7 @@ export default function Stock({ ctx }) {
         onClose={() => setEditing(null)}
         footer={
           <>
-            {editing?.id && (
+            {editing?.id && can('delete') && (
               <Btn tone="danger-ghost" onClick={removeItem}>
                 Remove Item
               </Btn>
@@ -278,6 +298,15 @@ export default function Stock({ ctx }) {
           <div className="form-grid">
             <Field label="Item Name" hint="e.g. Red Banarasi Lehenga Set">
               <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            </Field>
+            <Field label="Style Code" hint="unique code, e.g. LEH-101">
+              <Input value={editing.styleCode} onChange={(e) => setEditing({ ...editing, styleCode: e.target.value })} placeholder="LEH-101" />
+            </Field>
+            <Field label="Color">
+              <Input value={editing.color} onChange={(e) => setEditing({ ...editing, color: e.target.value })} placeholder="Red" />
+            </Field>
+            <Field label="Size">
+              <Input value={editing.size} onChange={(e) => setEditing({ ...editing, size: e.target.value })} placeholder="Free / S / M / L / XL" />
             </Field>
             <Field label="Item Image">
               <ImageUpload value={editing.image} alt={editing.name} onChange={(url) => setEditing({ ...editing, image: url })} />

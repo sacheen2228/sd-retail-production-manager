@@ -38,7 +38,7 @@ const EMPTY_STYLE = {
 }
 
 export default function Tracker({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const { styles, purchaseOrders, retailers } = db
   const [editing, setEditing] = useState(null)
   const [stageFilter, setStageFilter] = useState('All')
@@ -214,30 +214,36 @@ export default function Tracker({ ctx }) {
             ))}
           </select>
         </div>
-        <Btn onClick={openNew}>+ New Style / Job Card</Btn>
+        {can('create') && <Btn onClick={openNew}>+ New Style / Job Card</Btn>}
       </div>
 
       <Card>
         {selected.size > 0 && (
           <div className="bulk-bar">
             <span className="bulk-count">{selected.size} selected</span>
-            <Btn tone="success" onClick={advanceSelected}>
-              Advance all ▶
-            </Btn>
-            <select className="input input-sm" value={bulkStage} onChange={(e) => setBulkStage(e.target.value)}>
-              <option value="">Move to stage…</option>
-              {STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <Btn tone="ghost" onClick={setSelectedStage} disabled={!bulkStage}>
-              Apply
-            </Btn>
-            <Btn tone="danger-ghost" onClick={deleteSelected}>
-              Delete selected
-            </Btn>
+            {can('edit') && (
+              <>
+                <Btn tone="success" onClick={advanceSelected}>
+                  Advance all ▶
+                </Btn>
+                <select className="input input-sm" value={bulkStage} onChange={(e) => setBulkStage(e.target.value)}>
+                  <option value="">Move to stage…</option>
+                  {STAGES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <Btn tone="ghost" onClick={setSelectedStage} disabled={!bulkStage}>
+                  Apply
+                </Btn>
+              </>
+            )}
+            {can('delete') && (
+              <Btn tone="danger-ghost" onClick={deleteSelected}>
+                Delete selected
+              </Btn>
+            )}
             <Btn tone="ghost" onClick={clearSelected}>
               Clear
             </Btn>
@@ -304,18 +310,24 @@ export default function Tracker({ ctx }) {
                       </div>
                     </td>
                     <td className="row-actions">
-                      <Btn tone="ghost" onClick={() => moveStage(s, -1)} disabled={idx === 0} title="Move to previous stage">
-                        ◀
-                      </Btn>
-                      <Btn tone="ghost" onClick={() => setEditing({ ...s })}>
-                        Edit
-                      </Btn>
-                      <Btn tone="ghost" onClick={() => moveStage(s, 1)} disabled={idx === STAGES.length - 1} title="Advance stage">
-                        ▶
-                      </Btn>
-                      <Btn tone="danger-ghost" onClick={() => deleteStyle(s)} title="Delete job card">
-                        ✕
-                      </Btn>
+                      {can('edit') && (
+                        <>
+                          <Btn tone="ghost" onClick={() => moveStage(s, -1)} disabled={idx === 0} title="Move to previous stage">
+                            ◀
+                          </Btn>
+                          <Btn tone="ghost" onClick={() => setEditing({ ...s })}>
+                            Edit
+                          </Btn>
+                          <Btn tone="ghost" onClick={() => moveStage(s, 1)} disabled={idx === STAGES.length - 1} title="Advance stage">
+                            ▶
+                          </Btn>
+                        </>
+                      )}
+                      {can('delete') && (
+                        <Btn tone="danger-ghost" onClick={() => deleteStyle(s)} title="Delete job card">
+                          ✕
+                        </Btn>
+                      )}
                     </td>
                   </tr>
                 )
