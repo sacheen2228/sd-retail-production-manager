@@ -470,6 +470,50 @@ body {
   background: var(--success-soft);
 }
 
+@keyframes row-flash {
+  0% { background: #fff3d6; }
+  100% { background: transparent; }
+}
+
+.row-flash td {
+  animation: row-flash 2.4s ease-out;
+}
+
+.group-row td {
+  background: #f7f2ea;
+  padding: 7px 10px;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.group-name {
+  color: var(--muted);
+}
+
+.group-stats {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scan-input {
+  min-width: 260px;
+}
+
 .expanded-row td {
   background: #fbf9f6;
 }

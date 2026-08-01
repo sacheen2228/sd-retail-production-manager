@@ -266,7 +266,7 @@
     {
       "id": "msa0m209kc6gwz",
       "poId": "msa0m208m3frjg",
-      "styleCode": "BR-2412",
+      "styleCode": "LEH-101",
       "styleName": "Red Banarasi Lehenga Set",
       "category": "Bridal",
       "subCategory": "Lehenga Set",
@@ -291,7 +291,7 @@
     {
       "id": "msa0m209k2cra0",
       "poId": "msa0m208m3frjg",
-      "styleCode": "BR-2415",
+      "styleCode": "AN-310",
       "styleName": "Ivory Raw Silk Anarkali",
       "category": "Occasions",
       "subCategory": "Anarkali",
@@ -316,7 +316,7 @@
     {
       "id": "msa0m209a32zsr",
       "poId": "msa0m20983eljt",
-      "styleCode": "BR-2411",
+      "styleCode": "SH-208",
       "styleName": "Gold Organza Sharara",
       "category": "Occasions",
       "subCategory": "Sharara Set",
@@ -366,7 +366,7 @@
     {
       "id": "msa0m20996co43",
       "poId": "msa0m20967jenr",
-      "styleCode": "BR-2406",
+      "styleCode": "GW-115",
       "styleName": "Emerald Dupion Gown",
       "category": "Occasions",
       "subCategory": "Gown",
@@ -415,6 +415,42 @@
     }
   ],
   "auditLog": [
+    {
+      "id": "msa1o1tbn42qsq",
+      "user": "local",
+      "action": "insert",
+      "entity": "readyStock",
+      "entityId": "msa1o1tbknpo2a",
+      "detail": "Dup",
+      "createdAt": "2026-08-01T07:22:58.991Z"
+    },
+    {
+      "id": "msa1o1sckng843",
+      "user": "local",
+      "action": "insert",
+      "entity": "readyStock",
+      "entityId": "msa1o1sbsbjbxl",
+      "detail": "Base",
+      "createdAt": "2026-08-01T07:22:58.956Z"
+    },
+    {
+      "id": "msa1nw50hd21ey",
+      "user": "local",
+      "action": "insert",
+      "entity": "readyStock",
+      "entityId": "msa1nw50xt12ss",
+      "detail": "New",
+      "createdAt": "2026-08-01T07:22:51.637Z"
+    },
+    {
+      "id": "msa1nw49a5lg8b",
+      "user": "local",
+      "action": "insert",
+      "entity": "readyStock",
+      "entityId": "msa1nw48kksb3w",
+      "detail": "Dup",
+      "createdAt": "2026-08-01T07:22:51.609Z"
+    },
     {
       "id": "msa1ew6oi5chuu",
       "user": "local",

@@ -352,6 +352,17 @@ function route(method, path) {
   throw new Error(`Unknown route ${method} ${path}`)
 }
 
+async function sbVariantDuplicate(item, exceptId) {
+  const list = (await sbList('readyStock')) || []
+  return list.some(
+    (i) =>
+      i.id !== exceptId &&
+      String(i.styleCode || '').trim().toLowerCase() === String(item.styleCode || '').trim().toLowerCase() &&
+      String(i.color || '').trim().toLowerCase() === String(item.color || '').trim().toLowerCase() &&
+      String(i.size || '').trim().toLowerCase() === String(item.size || '').trim().toLowerCase()
+  )
+}
+
 async function supabaseApi(method, path, body) {
   const r = route(method, path)
   switch (r.type) {
@@ -377,8 +388,18 @@ async function supabaseApi(method, path, body) {
     }
     case 'collection':
       if (method === 'GET') return r.id ? sbGet(r.name, r.id) : sbList(r.name)
-      if (method === 'POST') return sbCreate(r.name, body)
-      if (method === 'PUT') return sbUpdate(r.name, r.id, body)
+      if (method === 'POST') {
+        if (r.name === 'readyStock' && (await sbVariantDuplicate(body))) {
+          throw new Error('A variant with this Style Code + Color + Size already exists')
+        }
+        return sbCreate(r.name, body)
+      }
+      if (method === 'PUT') {
+        if (r.name === 'readyStock' && (await sbVariantDuplicate(body, r.id))) {
+          throw new Error('A variant with this Style Code + Color + Size already exists')
+        }
+        return sbUpdate(r.name, r.id, body)
+      }
       if (method === 'DELETE') return sbRemove(r.name, r.id)
       throw new Error('Unsupported method ' + method)
     default:

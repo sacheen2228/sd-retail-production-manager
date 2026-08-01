@@ -37,6 +37,7 @@ export function validateStyle(e) {
 export function validateStockItem(e) {
   const errors = []
   errors.push(required(e.name, 'Item name'))
+  errors.push(required(e.styleCode, 'Style code'))
   errors.push(min(e.quantity, 0, 'Quantity'))
   errors.push(min(e.costPrice, 0, 'Cost price'))
   errors.push(min(e.sellingPrice, 0, 'Selling price'))

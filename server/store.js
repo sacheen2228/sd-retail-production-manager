@@ -97,7 +97,7 @@ export function seedData() {
       {
         id: uid(),
         poId: '',
-        styleCode: 'BR-2412',
+        styleCode: 'LEH-101',
         styleName: 'Red Banarasi Lehenga Set',
         category: 'Bridal',
         subCategory: 'Lehenga Set',
@@ -114,7 +114,7 @@ export function seedData() {
       {
         id: uid(),
         poId: '',
-        styleCode: 'BR-2415',
+        styleCode: 'AN-310',
         styleName: 'Ivory Raw Silk Anarkali',
         category: 'Occasions',
         subCategory: 'Anarkali',
@@ -131,7 +131,7 @@ export function seedData() {
       {
         id: uid(),
         poId: '',
-        styleCode: 'BR-2411',
+        styleCode: 'SH-208',
         styleName: 'Gold Organza Sharara',
         category: 'Occasions',
         subCategory: 'Sharara Set',
@@ -165,7 +165,7 @@ export function seedData() {
       {
         id: uid(),
         poId: '',
-        styleCode: 'BR-2406',
+        styleCode: 'GW-115',
         styleName: 'Emerald Dupion Gown',
         category: 'Occasions',
         subCategory: 'Gown',

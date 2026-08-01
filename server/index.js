@@ -90,9 +90,21 @@ app.get('/api/:collection', (req, res) => {
   res.json(db[collection])
 })
 
+const variantDuplicate = (db, item, exceptId) =>
+  db.readyStock.some(
+    (i) =>
+      i.id !== exceptId &&
+      String(i.styleCode || '').trim().toLowerCase() === String(item.styleCode || '').trim().toLowerCase() &&
+      String(i.color || '').trim().toLowerCase() === String(item.color || '').trim().toLowerCase() &&
+      String(i.size || '').trim().toLowerCase() === String(item.size || '').trim().toLowerCase()
+  )
+
 app.post('/api/:collection', (req, res) => {
   const { collection } = req.params
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
+  if (collection === 'readyStock' && variantDuplicate(db, req.body)) {
+    return res.status(400).json({ error: 'A variant with this Style Code + Color + Size already exists' })
+  }
   const item = { id: uid(), createdAt: todayStr(), ...req.body }
   if (collection === 'styles') {
     const stage = item.stage || 'Sampling'
@@ -110,6 +122,9 @@ app.put('/api/:collection/:id', (req, res) => {
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
   const idx = db[collection].findIndex((i) => i.id === id)
   if (idx === -1) return res.status(404).json({ error: 'Not found' })
+  if (collection === 'readyStock' && variantDuplicate(db, { ...db[collection][idx], ...req.body }, id)) {
+    return res.status(400).json({ error: 'A variant with this Style Code + Color + Size already exists' })
+  }
   const prev = db[collection][idx]
   const next = { ...prev, ...req.body, id }
   if (collection === 'styles') {

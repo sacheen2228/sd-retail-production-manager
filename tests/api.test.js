@@ -86,6 +86,23 @@ describe('data layer routing & mapping', () => {
     expect(item.size).toBe('M')
   })
 
+  it('rejects a duplicate style/color/size variant', async () => {
+    const api = await loadApi()
+    await api.post('/api/readyStock', { name: 'Suit A', styleCode: 'SU-100', color: 'Red', size: 'M', quantity: 2 })
+    await expect(api.post('/api/readyStock', { name: 'Suit A', styleCode: 'SU-100', color: 'Red', size: 'M', quantity: 5 })).rejects.toThrow(/already exists/i)
+    const sameCodeDiffSize = await api.post('/api/readyStock', { name: 'Suit A', styleCode: 'SU-100', color: 'Red', size: 'L', quantity: 5 })
+    expect(sameCodeDiffSize.id).toBeTruthy()
+  })
+
+  it('rejects a duplicate on edit too', async () => {
+    const api = await loadApi()
+    const a = await api.post('/api/readyStock', { name: 'Suit A', styleCode: 'SU-100', color: 'Red', size: 'M', quantity: 2 })
+    const b = await api.post('/api/readyStock', { name: 'Suit B', styleCode: 'SU-200', color: 'Blue', size: 'M', quantity: 2 })
+    await expect(api.put('/api/readyStock/' + b.id, { styleCode: 'SU-100', color: 'Red', size: 'M' })).rejects.toThrow(/already exists/i)
+    const ok = await api.put('/api/readyStock/' + b.id, { styleCode: 'SU-100', color: 'Blue', size: 'M' })
+    expect(ok.id).toBe(b.id)
+  })
+
   it('coerces numeric strings and empties foreign keys', async () => {
     const api = await loadApi()
     const po = await api.post('/api/purchaseOrders', {

@@ -32,6 +32,8 @@ function statusFor(r) {
   return { tone: 'success', label: 'In Stock' }
 }
 
+const COL_COUNT = 15
+
 export default function Stock({ ctx }) {
   const { db, refresh, can } = ctx
   const items = db.readyStock || []
@@ -40,6 +42,14 @@ export default function Stock({ ctx }) {
   const [category, setCategory] = useState('All')
   const [sub, setSub] = useState('All')
   const [search, setSearch] = useState('')
+  const [styleFilter, setStyleFilter] = useState('')
+  const [colorFilter, setColorFilter] = useState('')
+  const [sizeFilter, setSizeFilter] = useState('')
+  const [outOnly, setOutOnly] = useState(false)
+  const [groupMode, setGroupMode] = useState(false)
+  const [scanActive, setScanActive] = useState(false)
+  const [scanValue, setScanValue] = useState('')
+  const [highlight, setHighlight] = useState(null)
   const [uploadMsg, setUploadMsg] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -49,14 +59,63 @@ export default function Stock({ ctx }) {
 
   const subs = category === 'All' ? [] : CATEGORIES[category] || []
 
+  const colors = useMemo(() => [...new Set(items.map((i) => String(i.color || '').trim()).filter(Boolean))].sort(), [items])
+  const sizes = useMemo(() => [...new Set(items.map((i) => String(i.size || '').trim()).filter(Boolean))].sort(), [items])
+
+  const soldByStyle = useMemo(() => {
+    const map = {}
+    for (const s of db.styles || []) {
+      if (s.stage !== 'Dispatched') continue
+      const code = String(s.styleCode || '').trim().toLowerCase()
+      if (!code) continue
+      const qty = Number(s.qtyDispatched) || Number(s.quantity) || 0
+      const at = s.stageEnteredAt || s.createdAt
+      const cur = map[code] || { sold: 0, first: null }
+      cur.sold += qty
+      if (at && (!cur.first || at < cur.first)) cur.first = at
+      map[code] = cur
+    }
+    return map
+  }, [db.styles])
+
+  function runRate(styleCode, onHand) {
+    const s = soldByStyle[String(styleCode || '').trim().toLowerCase()] || { sold: 0, first: null }
+    let dos = null
+    let perDay = 0
+    if (s.first && s.sold > 0) {
+      const days = Math.max(1, Math.round((Date.now() - new Date(s.first + 'T00:00:00').getTime()) / 86400000))
+      perDay = s.sold / days
+      dos = Math.round((Number(onHand) || 0) / perDay)
+    }
+    const sellThru = s.sold + (Number(onHand) || 0) > 0 ? Math.round((s.sold / (s.sold + (Number(onHand) || 0))) * 100) : 0
+    return { sold: s.sold, sellThru, dos }
+  }
+
   const list = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const sc = styleFilter.trim().toLowerCase()
+    const col = colorFilter.toLowerCase()
+    const sz = sizeFilter.toLowerCase()
     return items
       .filter((i) => category === 'All' || i.category === category)
       .filter((i) => sub === 'All' || i.subCategory === sub)
-      .filter((i) => !q || i.name.toLowerCase().includes(q) || i.subCategory.toLowerCase().includes(q))
-      .sort((a, b) => String(a.category).localeCompare(String(b.category)))
-  }, [items, category, sub, search])
+      .filter((i) => !q || i.name.toLowerCase().includes(q) || i.subCategory.toLowerCase().includes(q) || String(i.styleCode || '').toLowerCase().includes(q))
+      .filter((i) => !sc || String(i.styleCode || '').trim().toLowerCase() === sc)
+      .filter((i) => !col || String(i.color || '').trim().toLowerCase() === col)
+      .filter((i) => !sz || String(i.size || '').trim().toLowerCase() === sz)
+      .filter((i) => !outOnly || (Number(i.quantity) || 0) <= 0)
+      .sort((a, b) => String(a.styleCode || '').localeCompare(String(b.styleCode || '')) || String(a.category).localeCompare(String(b.category)))
+  }, [items, category, sub, search, styleFilter, colorFilter, sizeFilter, outOnly])
+
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const r of list) {
+      const key = String(r.styleCode || '').trim().toLowerCase() || '#' + String(r.name || '').trim().toLowerCase()
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push(r)
+    }
+    return [...map.values()]
+  }, [list])
 
   const totalPieces = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)
   const totalValue = items.reduce((s, i) => s + (Number(i.costPrice) || 0) * (Number(i.quantity) || 0), 0)
@@ -66,10 +125,28 @@ export default function Stock({ ctx }) {
     setEditing({ ...EMPTY })
   }
 
+  function duplicateExists(item) {
+    const code = String(item.styleCode || '').trim().toLowerCase()
+    if (!code) return false
+    const color = String(item.color || '').trim().toLowerCase()
+    const size = String(item.size || '').trim().toLowerCase()
+    return items.some(
+      (x) =>
+        x.id !== item.id &&
+        String(x.styleCode || '').trim().toLowerCase() === code &&
+        String(x.color || '').trim().toLowerCase() === color &&
+        String(x.size || '').trim().toLowerCase() === size
+    )
+  }
+
   function saveItem() {
     const err = firstError(validateStockItem(editing))
     if (err) {
       push(err, 'danger')
+      return
+    }
+    if (duplicateExists(editing)) {
+      push('This Style Code + Color + Size variant already exists', 'danger')
       return
     }
     const body = {
@@ -112,13 +189,41 @@ export default function Stock({ ctx }) {
   }
 
   const exportData = useMemo(() => {
-    const cols = ['Sr No', 'Item', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Qty on Hand', 'Cost', 'Selling', 'Value', 'Status', 'Location']
+    const cols = ['Sr No', 'Item', 'Style Code', 'Color', 'Size', 'Category', 'Sub-category', 'Qty on Hand', 'Cost', 'Selling', 'Value', 'Sold', 'Sell-thru %', 'Days of Stock', 'Status', 'Location']
     const rows = list.map((r, i) => {
       const st = statusFor(r)
-      return [i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, r.quantity, r.costPrice, r.sellingPrice, (Number(r.costPrice) || 0) * (Number(r.quantity) || 0), st.label, r.location]
+      const rr = runRate(r.styleCode, r.quantity)
+      return [
+        i + 1, r.name, r.styleCode || '', r.color || '', r.size || '', r.category, r.subCategory, r.quantity, r.costPrice, r.sellingPrice,
+        (Number(r.costPrice) || 0) * (Number(r.quantity) || 0), rr.sold, rr.sellThru ? rr.sellThru + '%' : '-', rr.dos == null ? '-' : rr.dos, st.label, r.location
+      ]
     })
     return { cols, rows }
-  }, [list])
+  }, [list, soldByStyle])
+
+  function handleScan() {
+    const code = scanValue.trim().toLowerCase()
+    if (!code) return
+    const match = items.find((i) => String(i.styleCode || '').trim().toLowerCase() === code || String(i.name || '').toLowerCase() === code)
+    if (!match) {
+      push(`No ready-stock item found for "${scanValue.trim()}"`, 'danger')
+      return
+    }
+    setCategory('All')
+    setSub('All')
+    setSearch('')
+    setStyleFilter('')
+    setColorFilter('')
+    setSizeFilter('')
+    setOutOnly(false)
+    setScanValue('')
+    setScanActive(false)
+    requestAnimationFrame(() => {
+      setHighlight(match.id)
+      document.getElementById('stock-row-' + match.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    setTimeout(() => setHighlight(null), 2600)
+  }
 
   function exportCSV() {
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -202,6 +307,54 @@ export default function Stock({ ctx }) {
         {can('create') && <Btn onClick={openNew}>+ Add Stock Item</Btn>}
       </div>
 
+      <div className="view-toolbar">
+        <div className="toolbar-left">
+          {scanActive ? (
+            <input
+              className="input input-sm scan-input"
+              autoFocus
+              value={scanValue}
+              onChange={(e) => setScanValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleScan()
+                else if (e.key === 'Escape') { setScanActive(false); setScanValue('') }
+              }}
+              placeholder="Scan barcode / type SKU, press Enter…"
+            />
+          ) : (
+            <Btn tone="ghost" onClick={() => setScanActive(true)} title="Look up an item by barcode / SKU">
+              Scan
+            </Btn>
+          )}
+          <select className="input input-sm" value={styleFilter} onChange={(e) => setStyleFilter(e.target.value)}>
+            <option value="">All style codes</option>
+            {[...new Set(items.map((i) => String(i.styleCode || '').trim()).filter(Boolean))].sort().map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select className="input input-sm" value={colorFilter} onChange={(e) => setColorFilter(e.target.value)}>
+            <option value="">All colors</option>
+            {colors.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select className="input input-sm" value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
+            <option value="">All sizes</option>
+            {sizes.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <label className="filter-check">
+            <input type="checkbox" checked={outOnly} onChange={(e) => setOutOnly(e.target.checked)} />
+            Out of stock only
+          </label>
+          <label className="filter-check">
+            <input type="checkbox" checked={groupMode} onChange={(e) => setGroupMode(e.target.checked)} />
+            Group by style
+          </label>
+        </div>
+      </div>
+
       {uploadMsg && (
         <div className={`upload-msg ${uploadMsg.tone === 'danger' ? 'upload-msg-danger' : ''}`}>
           {uploadMsg.text}
@@ -226,50 +379,112 @@ export default function Stock({ ctx }) {
                 <th>Cost</th>
                 <th>Selling</th>
                 <th>Value</th>
+                <th>Sold</th>
+                <th>Days of Stock</th>
                 <th>Status</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {list.map((r, i) => {
-                const st = statusFor(r)
-                return (
-                  <tr key={r.id}>
-                    <td className="muted">{i + 1}</td>
-                    <td className="strong">
-                      <div className="style-cell">
-                        {r.image && <img className="style-thumb" src={r.image} alt="" />}
-                        <div>
-                          {r.name}
-                          {r.location && <div className="cell-sub">{r.location}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{r.styleCode || '-'}</td>
-                    <td>{r.color || '-'}</td>
-                    <td>{r.size || '-'}</td>
-                    <td>{r.category}</td>
-                    <td>{r.subCategory || '-'}</td>
-                    <td className="strong">{r.quantity}</td>
-                    <td>{fmtMoney(r.costPrice)}</td>
-                    <td>{fmtMoney(r.sellingPrice)}</td>
-                    <td>{fmtMoney((Number(r.costPrice) || 0) * (Number(r.quantity) || 0))}</td>
-                    <td><Badge tone={st.tone}>{st.label}</Badge></td>
-                    <td className="row-actions">
-                      {can('edit') && (
-                        <>
-                          <Btn tone="success" onClick={() => setAddQty({ item: r, qty: '' })} title="Add stock on hand">
-                            + Stock
-                          </Btn>
-                          <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
-                            Edit
-                          </Btn>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
+              {groupMode
+                ? groups.map((g) => {
+                    const totalQty = g.reduce((s, v) => s + (Number(v.quantity) || 0), 0)
+                    const sold = g.reduce((s, v) => s + runRate(v.styleCode, v.quantity).sold, 0)
+                    const total = sold + totalQty
+                    const sellThru = total > 0 ? Math.round((sold / total) * 100) : 0
+                    return (
+                      <React.Fragment key={g[0].id}>
+                        <tr className="group-row">
+                          <td colSpan={COL_COUNT}>
+                            <div className="group-head">
+                              <span className="strong">{g[0].styleCode || 'No code'}</span>
+                              <span className="group-name">{g[0].name}</span>
+                              <span className="badge badge-default">{g.length} variant{g.length > 1 ? 's' : ''}</span>
+                              <span className="group-stats">
+                                {totalQty} pcs · {sold} sold · {sellThru}% sell-thru
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {g.map((v, vi) => {
+                          const st = statusFor(v)
+                          const rr = runRate(v.styleCode, v.quantity)
+                          return (
+                            <tr key={v.id} id={'stock-row-' + v.id} className={highlight === v.id ? 'row-flash' : ''}>
+                              <td className="muted">{vi + 1}</td>
+                              <td className="strong">{v.name}</td>
+                              <td className="muted">↳</td>
+                              <td>{v.color || '-'}</td>
+                              <td>{v.size || '-'}</td>
+                              <td>{v.category}</td>
+                              <td>{v.subCategory || '-'}</td>
+                              <td className="strong">{v.quantity}</td>
+                              <td>{fmtMoney(v.costPrice)}</td>
+                              <td>{fmtMoney(v.sellingPrice)}</td>
+                              <td>{fmtMoney((Number(v.costPrice) || 0) * (Number(v.quantity) || 0))}</td>
+                              <td>{rr.sold > 0 ? `${rr.sold} (${rr.sellThru}%)` : '-'}</td>
+                              <td>{rr.dos == null ? '-' : rr.dos}</td>
+                              <td><Badge tone={st.tone}>{st.label}</Badge></td>
+                              <td className="row-actions">
+                                {can('edit') && (
+                                  <>
+                                    <Btn tone="success" onClick={() => setAddQty({ item: v, qty: '' })} title="Add stock on hand">
+                                      + Stock
+                                    </Btn>
+                                    <Btn tone="ghost" onClick={() => setEditing({ ...v })}>
+                                      Edit
+                                    </Btn>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </React.Fragment>
+                    )
+                  })
+                : list.map((r, i) => {
+                    const st = statusFor(r)
+                    const rr = runRate(r.styleCode, r.quantity)
+                    return (
+                      <tr key={r.id} id={'stock-row-' + r.id} className={highlight === r.id ? 'row-flash' : ''}>
+                        <td className="muted">{i + 1}</td>
+                        <td className="strong">
+                          <div className="style-cell">
+                            {r.image && <img className="style-thumb" src={r.image} alt="" />}
+                            <div>
+                              {r.name}
+                              {r.location && <div className="cell-sub">{r.location}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{r.styleCode || '-'}</td>
+                        <td>{r.color || '-'}</td>
+                        <td>{r.size || '-'}</td>
+                        <td>{r.category}</td>
+                        <td>{r.subCategory || '-'}</td>
+                        <td className="strong">{r.quantity}</td>
+                        <td>{fmtMoney(r.costPrice)}</td>
+                        <td>{fmtMoney(r.sellingPrice)}</td>
+                        <td>{fmtMoney((Number(r.costPrice) || 0) * (Number(r.quantity) || 0))}</td>
+                        <td>{rr.sold > 0 ? `${rr.sold} (${rr.sellThru}%)` : '-'}</td>
+                        <td>{rr.dos == null ? '-' : rr.dos}</td>
+                        <td><Badge tone={st.tone}>{st.label}</Badge></td>
+                        <td className="row-actions">
+                          {can('edit') && (
+                            <>
+                              <Btn tone="success" onClick={() => setAddQty({ item: r, qty: '' })} title="Add stock on hand">
+                                + Stock
+                              </Btn>
+                              <Btn tone="ghost" onClick={() => setEditing({ ...r })}>
+                                Edit
+                              </Btn>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
             </tbody>
           </table>
         )}
