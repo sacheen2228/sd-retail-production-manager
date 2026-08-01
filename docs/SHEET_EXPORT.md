@@ -33,8 +33,17 @@ function doPost(e) {
       if (!target) {
         target = s.name ? ss.insertSheet(s.name) : ss.getActiveSheet()
       }
-      if (target.getLastRow() === 0) target.appendRow(s.cols || [])
-      target.getRange(target.getLastRow() + 1, 1, s.rows.length, s.rows[0].length).setValues(s.rows)
+      // Replace (not append): each export overwrites the tab so stale rows
+      // and old column layouts never linger below the latest snapshot.
+      const header = Array.isArray(s.cols) ? s.cols : []
+      const width = Math.max(header.length, s.rows[0].length)
+      const values = [header.concat(Array(Math.max(0, width - header.length)).fill(''))]
+      for (const r of s.rows) {
+        const row = Array.isArray(r) ? r : [r]
+        values.push(row.concat(Array(Math.max(0, width - row.length)).fill('')))
+      }
+      target.clearContents()
+      if (width) target.getRange(1, 1, values.length, width).setValues(values)
       written += s.rows.length
     }
     return respond({ ok: true, count: written, sheets: list.length, spreadsheet: ss.getUrl() })
@@ -76,14 +85,14 @@ If you use the optional token: open the Apps Script editor → **Project Setting
 ## 3. Use it
 
 - **Sidebar → "⇪ Export all data to Sheets"** (visible on every page) pushes the **entire database** — Retailers, Vendors, Fabrics, Ready Stock, Purchase Orders, Styles — each into its own tab of your sheet. Tabs are created on first export.
-- **Stock Report** toolbar: **→ Sheet** appends the filtered ready-stock rows to the **Ready Stock** tab.
-- **Reports → WIP** card: **→ Sheet** appends the WIP rows to the **WIP Report** tab.
+- **Stock Report** toolbar: **→ Sheet** replaces the **Ready Stock** tab with the filtered ready-stock rows (including Sr No, Style Code, Color, Size, Sold, Sell-thru % and Days of Stock).
+- **Reports → WIP** card: **→ Sheet** replaces the **WIP Report** tab with the WIP rows.
 
 A toast confirms how many rows were written. Because the script returns the sheet's URL, the toast now includes an **Open Sheet ↗** button that jumps straight to your Google Sheet. If the button shows a warning toast instead, the `VITE_GOOGLE_SHEET_WEB_APP_URL` env var isn't set yet.
 
-> **Already deployed the script?** The **Open Sheet** button only appears when the Apps Script returns `spreadsheet: ss.getUrl()`. Update the script to the version above (which includes that line), then **Deploy → Manage deployments → ✎ Edit → New version** to redeploy.
+> **Already deployed the script?** The **Open Sheet** button only appears when the Apps Script returns `spreadsheet: ss.getUrl()`. Update the script to the version above (which includes that line), then **Deploy → Manage deployments → ✎ Edit → New version** to redeploy. The version above also **clears each tab before writing**, so every export is a fresh snapshot — old headers/rows never accumulate. If your sheet already shows stale rows from older exports, redeploying and re-exporting once will replace them.
 
 ## Notes
 
-- The web app URL is public; the optional `TOKEN` is a lightweight gate, not real security. Anyone with the URL could append rows, so keep the sheet private to your team.
-- Exports **append** — run them on a schedule by hand, or later add a Vercel cron job that calls the same endpoint.
+- The web app URL is public; the optional `TOKEN` is a lightweight gate, not real security. Anyone with the URL could write rows, so keep the sheet private to your team.
+- Exports **replace** the tab (clear + rewrite) — run them on a schedule by hand, or later add a Vercel cron job that calls the same endpoint.
