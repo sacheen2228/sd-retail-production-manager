@@ -8,7 +8,9 @@ Free-tier, no Express server in production. The app is served as a static SPA fr
 2. Open **SQL Editor → New query**, paste and run `supabase/schema.sql`. This creates:
    - Tables: `retailers`, `vendors`, `fabrics`, `ready_stock`, `purchase_orders`, `styles`
    - Enums `po_status`, `production_stage`; indexes; the `fabric_stock_report` view
-   - Row-Level Security policies (authenticated users can read/write their tenant data) and sample seed data
+   - `profiles` (roles: admin/manager/viewer) and `audit_log`, with database triggers that auto-assign roles to new signups and record every change
+   - Row-Level Security policies — anyone signed in can read; **admin/manager** create & edit; only **admin** can delete, restore, or change roles
+   - Sample seed data
 3. Under **Authentication → Providers → Email**, keep email/password enabled.
 4. Copy from **Project Settings → API**:
    - `Project URL` → `VITE_SUPABASE_URL`
@@ -30,9 +32,13 @@ Free-tier, no Express server in production. The app is served as a static SPA fr
    - `VITE_CLOUDINARY_UPLOAD_PRESET`
 3. Deploy. `vercel.json` already sets the build command, output directory (`dist`), SPA rewrites and cache headers.
 
-## 4. Sign up a user
+## 4. Sign up users & assign roles
 
-With auth enabled, the app opens on a **sign-in screen**. Click **Create account** and register the first email — that user can then log in on any device. Sign-in is required because all Supabase queries are gated by RLS to authenticated users.
+With auth enabled, the app opens on a **sign-in screen**. Click **Create account** and register the first email — **that first account automatically becomes the Admin**. Everyone who signs up afterwards starts as a **Viewer** (read-only).
+
+Manage roles in the app: **Settings → Roles & Permissions** (admin only). Only admins can delete records, restore backups, and change roles. Existing accounts created before this schema ran are backfilled as admins.
+
+> **Re-run `supabase/schema.sql`** against an existing project to create `profiles` + `audit_log` and upgrade the RLS policies. It is safe to re-run.
 
 ## Notes
 

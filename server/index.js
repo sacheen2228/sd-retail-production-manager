@@ -37,8 +37,51 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
 })
 
+// Keeps the (potentially large) audit trail out of the main data payload.
 app.get('/api/data', (_req, res) => {
-  res.json(db)
+  const { auditLog, ...rest } = db
+  res.json(rest)
+})
+
+function audit(collection, item, action) {
+  db.auditLog = db.auditLog || []
+  const label = item?.name || item?.poNumber || item?.styleCode || item?.styleName || item?.id || ''
+  db.auditLog.unshift({
+    id: uid(),
+    user: 'local',
+    action,
+    entity: collection,
+    entityId: item?.id || '',
+    detail: label,
+    createdAt: new Date().toISOString()
+  })
+  if (db.auditLog.length > 2000) db.auditLog = db.auditLog.slice(0, 2000)
+}
+
+app.get('/api/backup', (_req, res) => {
+  const { auditLog, ...rest } = db
+  res.json(rest)
+})
+
+app.post('/api/backup/restore', (req, res) => {
+  const body = req.body || {}
+  const order = ['retailers', 'vendors', 'fabrics', 'readyStock', 'purchaseOrders', 'styles']
+  for (const c of order) {
+    if (!Array.isArray(body[c])) {
+      return res.status(400).json({ error: `Backup file is missing the "${c}" collection` })
+    }
+  }
+  order.forEach((c) => {
+    db[c] = body[c]
+  })
+  saveDB(db)
+  audit('backup', { id: '', name: 'Restore performed' }, 'update')
+  saveDB(db)
+  res.json({ ok: true, counts: Object.fromEntries(order.map((c) => [c, db[c].length])) })
+})
+
+app.get('/api/audit', (_req, res) => {
+  res.json((db.auditLog || []).slice(0, 500))
 })
 
 app.get('/api/:collection', (req, res) => {
@@ -47,9 +90,21 @@ app.get('/api/:collection', (req, res) => {
   res.json(db[collection])
 })
 
+const variantDuplicate = (db, item, exceptId) =>
+  db.readyStock.some(
+    (i) =>
+      i.id !== exceptId &&
+      String(i.styleCode || '').trim().toLowerCase() === String(item.styleCode || '').trim().toLowerCase() &&
+      String(i.color || '').trim().toLowerCase() === String(item.color || '').trim().toLowerCase() &&
+      String(i.size || '').trim().toLowerCase() === String(item.size || '').trim().toLowerCase()
+  )
+
 app.post('/api/:collection', (req, res) => {
   const { collection } = req.params
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
+  if (collection === 'readyStock' && variantDuplicate(db, req.body)) {
+    return res.status(400).json({ error: 'A variant with this Style Code + Color + Size already exists' })
+  }
   const item = { id: uid(), createdAt: todayStr(), ...req.body }
   if (collection === 'styles') {
     const stage = item.stage || 'Sampling'
@@ -57,6 +112,7 @@ app.post('/api/:collection', (req, res) => {
     item.history = [{ at: todayStr(), from: null, to: stage, note: 'Order created' }]
   }
   db[collection].push(item)
+  audit(collection, item, 'insert')
   saveDB(db)
   res.status(201).json(item)
 })
@@ -66,6 +122,9 @@ app.put('/api/:collection/:id', (req, res) => {
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
   const idx = db[collection].findIndex((i) => i.id === id)
   if (idx === -1) return res.status(404).json({ error: 'Not found' })
+  if (collection === 'readyStock' && variantDuplicate(db, { ...db[collection][idx], ...req.body }, id)) {
+    return res.status(400).json({ error: 'A variant with this Style Code + Color + Size already exists' })
+  }
   const prev = db[collection][idx]
   const next = { ...prev, ...req.body, id }
   if (collection === 'styles') {
@@ -86,6 +145,7 @@ app.put('/api/:collection/:id', (req, res) => {
     }
   }
   db[collection][idx] = next
+  audit(collection, next, 'update')
   saveDB(db)
   res.json(next)
 })
@@ -95,7 +155,8 @@ app.delete('/api/:collection/:id', (req, res) => {
   if (!isValidCollection(collection)) return res.status(404).json({ error: 'Unknown collection' })
   const idx = db[collection].findIndex((i) => i.id === id)
   if (idx === -1) return res.status(404).json({ error: 'Not found' })
-  db[collection].splice(idx, 1)
+  const removed = db[collection].splice(idx, 1)[0]
+  audit(collection, removed, 'delete')
   saveDB(db)
   res.json({ ok: true })
 })
@@ -103,16 +164,20 @@ app.delete('/api/:collection/:id', (req, res) => {
 const normalizeKey = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const HEADER_MAP = {
   name: ['name', 'item', 'itemname', 'product', 'productname', 'style', 'stylename', 'garment'],
+  styleCode: ['stylecode', 'style', 'styleid', 'code', 'sku', 'itemcode', 'styleno'],
+  color: ['color', 'colour', 'shade'],
+  size: ['size', 'sizes', 'garmentsize', 'fit'],
   category: ['category', 'cat'],
   subCategory: ['subcategory', 'subcat', 'sub', 'category2', 'subcategory2'],
-  quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'pieces', 'pcs', 'nos'],
+  quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'closing', 'pieces', 'pcs', 'nos'],
+  receivedStock: ['receivedstock', 'received', 'stockreceived', 'incoming'],
   costPrice: ['costprice', 'cost', 'unitcost', 'costperpiece', 'costpriceinr'],
   sellingPrice: ['sellingprice', 'selling', 'price', 'mrp', 'saleprice', 'sellingpriceinr'],
   lowStockLevel: ['lowstocklevel', 'lowstock', 'reorderlevel', 'minstock', 'alertlevel'],
   location: ['location', 'store', 'city', 'storename', 'retailer']
 }
 
-const FLOAT_KEYS = ['quantity', 'costPrice', 'sellingPrice', 'lowStockLevel']
+const FLOAT_KEYS = ['quantity', 'receivedStock', 'costPrice', 'sellingPrice', 'lowStockLevel']
 
 app.post('/api/readyStock/upload', (req, res) => {
   const { file, filename } = req.body || {}
@@ -168,6 +233,7 @@ app.post('/api/readyStock/upload', (req, res) => {
         created++
       }
     }
+    audit('readyStock', { id: '', name: `Excel upload (${created} created, ${updated} updated, ${skipped} skipped)` }, 'update')
     saveDB(db)
     const fileHint = filename ? ` (${filename})` : ''
     res.json({ ok: true, created, updated, skipped, message: `Upload complete${fileHint}: ${created} created, ${updated} updated, ${skipped} rows skipped.` })
@@ -347,8 +413,11 @@ app.get('/api/reports/wip', (_req, res) => {
       retailer: retailer ? retailer.name : '-',
       category: s.category,
       subCategory: s.subCategory || '',
+      color: s.color || '',
+      size: s.size || '',
       quantity: s.quantity,
       qtyDispatched: s.qtyDispatched,
+      wip: (Number(s.quantity) || 0) - (Number(s.qtyDispatched) || 0),
       stage: s.stage,
       daysInStage: s.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(s.stageEnteredAt)) / 86400000)) : 0,
       deliveryDate: due,

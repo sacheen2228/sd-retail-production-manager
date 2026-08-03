@@ -12,7 +12,7 @@ function cmp(a, b) {
   return String(a ?? '').localeCompare(String(b ?? ''))
 }
 
-export default function DrillDown({ panel, onClose, db, refresh, navigate }) {
+export default function DrillDown({ panel, onClose, db, refresh, navigate, can }) {
   const { push } = useToast()
   const [state, setState] = useState(null)
   const [query, setQuery] = useState('')
@@ -40,9 +40,10 @@ export default function DrillDown({ panel, onClose, db, refresh, navigate }) {
       refresh,
       navigate,
       push,
+      can: can || (() => true),
       openKind: (k, id) => setState({ kind: k, id })
     }),
-    [db, refresh, navigate, push]
+    [db, refresh, navigate, push, can]
   )
 
   const allRows = useMemo(() => cfg.getRows(db), [cfg, db])

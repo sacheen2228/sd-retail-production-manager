@@ -1,9 +1,13 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useState, useCallback } from 'react'
 import { api } from './api.js'
-import { authEnabled, getSession, onAuthChange, signOut } from './services/auth.js'
+import { authEnabled, getSession, getUserRole, onAuthChange, signOut } from './services/auth.js'
 import { exportAllToSheet } from './services/sheets.js'
+import { can as canDo } from './lib/permissions.js'
 import { ToastProvider, useToast } from './context/ToastContext.jsx'
 import AuthScreen from './components/AuthScreen.jsx'
+import { GlobalSearch, useGlobalSearch } from './components/GlobalSearch.jsx'
+import { MobileFAB } from './components/MobileFAB.jsx'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
 
 const Dashboard = lazy(() => import('./views/Dashboard.jsx'))
 const Orders = lazy(() => import('./views/Orders.jsx'))
@@ -13,16 +17,18 @@ const Deliveries = lazy(() => import('./views/Deliveries.jsx'))
 const Stock = lazy(() => import('./views/Stock.jsx'))
 const Reports = lazy(() => import('./views/Reports.jsx'))
 const Partners = lazy(() => import('./views/Partners.jsx'))
+const Settings = lazy(() => import('./views/Settings.jsx'))
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-  { id: 'orders', label: 'Purchase Orders', icon: '▤' },
-  { id: 'tracker', label: 'Production Tracker', icon: '▶' },
-  { id: 'calendar', label: 'Calendar', icon: '▦' },
-  { id: 'deliveries', label: 'Deliveries', icon: '❖' },
-  { id: 'stock', label: 'Stock Report', icon: '▣' },
-  { id: 'reports', label: 'Reports', icon: '≡' },
-  { id: 'partners', label: 'Partners & Stock', icon: '✦' }
+  { id: 'dashboard', label: 'Dashboard', icon: '◈', key: 'd' },
+  { id: 'orders', label: 'Purchase Orders', icon: '▤', key: 'o' },
+  { id: 'tracker', label: 'Production Tracker', icon: '▶', key: 't' },
+  { id: 'calendar', label: 'Calendar', icon: '▦', key: 'c' },
+  { id: 'deliveries', label: 'Deliveries', icon: '❖', key: 'v' },
+  { id: 'stock', label: 'Stock Report', icon: '▣', key: 's' },
+  { id: 'reports', label: 'Reports', icon: '≡', key: 'r' },
+  { id: 'partners', label: 'Partners & Stock', icon: '✦', key: 'p' },
+  { id: 'settings', label: 'Settings', icon: '⚙', key: 'g' }
 ]
 
 const VIEWS = {
@@ -33,16 +39,19 @@ const VIEWS = {
   deliveries: Deliveries,
   stock: Stock,
   reports: Reports,
-  partners: Partners
+  partners: Partners,
+  settings: Settings
 }
 
 function Shell() {
   const [db, setDb] = useState(null)
+  const [role, setRole] = useState(authEnabled ? null : 'admin')
   const [view, setView] = useState('dashboard')
   const [error, setError] = useState(null)
   const [navOpen, setNavOpen] = useState(false)
   const [exportingAll, setExportingAll] = useState(false)
   const { push } = useToast()
+  const { isOpen: searchOpen, setIsOpen: setSearchOpen } = useGlobalSearch(db, navigate)
 
   useEffect(() => {
     api
@@ -52,6 +61,9 @@ function Shell() {
         setError(e.message)
         push('Failed to load data: ' + e.message, 'danger')
       })
+    getUserRole()
+      .then((r) => setRole(r || 'viewer'))
+      .catch(() => setRole('viewer'))
   }, [])
 
   function refresh() {
@@ -61,7 +73,10 @@ function Shell() {
   function exportAll() {
     setExportingAll(true)
     exportAllToSheet(db)
-      .then((res) => push(`Exported ${res.sheets} tabs to Google Sheets`, 'success'))
+      .then((res) => {
+        const action = res.spreadsheet ? { label: 'Open Sheet', href: res.spreadsheet } : null
+        push(`Exported ${res.sheets} tabs to Google Sheets`, 'success', action ? { action } : {})
+      })
       .catch((e) => push(e.message, 'danger'))
       .finally(() => setExportingAll(false))
   }
@@ -71,14 +86,39 @@ function Shell() {
     setNavOpen(false)
   }
 
-  if (error) return <div className="boot-error">Failed to load data: {error}</div>
-  if (!db) return <div className="boot">Loading production data…</div>
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    '/': () => setSearchOpen(true),
+    'n': () => navigate('orders'),
+    't': () => navigate('tracker'),
+    'd': () => navigate('deliveries'),
+    'c': () => navigate('calendar'),
+    's': () => navigate('stock'),
+    'r': () => navigate('reports'),
+    'p': () => navigate('partners'),
+    'Escape': () => { setNavOpen(false); setSearchOpen(false) }
+  })
 
-  const ctx = { db, refresh, navigate }
+  if (error) return <div className="boot-error">Failed to load data: {error}</div>
+  if (!db || role === null) return <div className="boot">Loading production data…</div>
+
+  const ctx = { db, refresh, navigate, role, can: (a) => canDo(role, a) }
   const Active = VIEWS[view]
+
+  const fabActions = canDo(role, 'create')
+    ? [
+        { label: 'New PO', icon: '▤', onClick: () => navigate('orders') },
+        { label: 'New Style', icon: '▶', onClick: () => navigate('tracker') },
+        { label: 'New Delivery', icon: '❖', onClick: () => navigate('deliveries') },
+        { label: 'New Stock', icon: '▣', onClick: () => navigate('stock') }
+      ]
+    : []
 
   return (
     <div className="layout">
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} db={db} navigate={navigate} />
+      <MobileFAB primary={{ label: 'Create', onClick: () => {} }} actions={fabActions} />
+
       <div className={`nav-scrim ${navOpen ? 'show' : ''}`} onClick={() => setNavOpen(false)} />
       <aside className={`sidebar ${navOpen ? 'open' : ''}`}>
         <div className="brand">
@@ -94,6 +134,7 @@ function Shell() {
               key={n.id}
               className={`nav-item ${view === n.id ? 'active' : ''}`}
               onClick={() => navigate(n.id)}
+              title={`${n.label} (${n.key.toUpperCase()})`}
             >
               <span className="nav-icon">{n.icon}</span>
               {n.label}
@@ -116,6 +157,9 @@ function Shell() {
           )}
           <div className="sidebar-foot-title">Daily WIP report</div>
           <div className="sidebar-foot-sub">Data refreshes automatically on save</div>
+          <div className="sidebar-foot-sub" style={{ marginTop: 8, opacity: 0.85 }}>
+            build rk-retail v3.2 (color+size+formulas)
+          </div>
         </div>
       </aside>
       <main className="main">

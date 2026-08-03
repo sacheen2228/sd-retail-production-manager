@@ -1,18 +1,15 @@
-const SHEET_URL = import.meta.env.VITE_GOOGLE_SHEET_WEB_APP_URL
+const SHEET_URL = '/api/export'
 const SHEET_TOKEN = import.meta.env.VITE_GOOGLE_SHEET_TOKEN || ''
 
 /**
- * One-way export to a Google Sheet via a Google Apps Script web app.
+ * One-way export to a Google Sheet via the same-origin proxy (/api/export),
+ * which forwards to the Google Apps Script web app server-side.
  * Payload: { token, sheets: [{ name, cols, rows }] } — each entry becomes a tab.
- *
- * `Content-Type: text/plain` keeps the POST a "simple" request so no CORS
- * preflight is needed against the Apps Script endpoint.
  */
 async function post(payload) {
-  if (!SHEET_URL) throw new Error('Google Sheets export is not configured (VITE_GOOGLE_SHEET_WEB_APP_URL)')
   const res = await fetch(SHEET_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: SHEET_TOKEN, ...payload })
   })
   const text = await res.text()
@@ -35,7 +32,14 @@ function buildAllSheets(db) {
   const escDate = (d) => d || ''
   const retailerById = Object.fromEntries((db.retailers || []).map((r) => [r.id, r.name]))
   const poById = Object.fromEntries((db.purchaseOrders || []).map((p) => [p.id, p.poNumber]))
-  return [
+  const soldByStyle = {}
+  for (const s of db.styles || []) {
+    if (s.stage !== 'Dispatched') continue
+    const code = String(s.styleCode || '').trim().toLowerCase()
+    if (!code) continue
+    soldByStyle[code] = (soldByStyle[code] || 0) + (Number(s.qtyDispatched) || Number(s.quantity) || 0)
+  }
+  const sheets = [
     {
       name: 'Retailers',
       cols: ['Name', 'City', 'Contact'],
@@ -52,21 +56,57 @@ function buildAllSheets(db) {
       rows: (db.fabrics || []).map((r) => [r.name, r.type, num(r.stock), r.uom, r.vendor, num(r.leadTimeDays), num(r.costPrice), num(r.consumption), num(r.lowStockLevel)])
     },
     {
+      name: 'Styles',
+      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'Color', 'Size', 'PO', 'Order Qty', 'WIP', 'Dispatch', 'Stage', 'Days', 'Status'],
+      rows: (db.styles || []).map((r, i) => {
+        const qty = num(r.quantity)
+        const dispatched = num(r.qtyDispatched)
+        const row = i + 2
+        return [
+          r.styleCode, r.styleName, r.category, r.subCategory, r.color || '', r.size || '',
+          poById[r.poId] || '', qty, `=H${row}-J${row}`, dispatched,
+          r.stage, r.stageEnteredAt ? Math.max(1, Math.ceil((new Date() - new Date(r.stageEnteredAt)) / 86400000)) : 0,
+          `=IF(J${i + 2}>0,"Dispatched","In Production")`
+        ]
+      })
+    },
+    {
       name: 'Ready Stock',
-      cols: ['Name', 'Category', 'Sub-category', 'Quantity', 'Cost Price', 'Selling Price', 'Low Stock Level', 'Location'],
-      rows: (db.readyStock || []).map((r) => [r.name, r.category, r.subCategory, num(r.quantity), num(r.costPrice), num(r.sellingPrice), num(r.lowStockLevel), r.location])
+      cols: ['Sr', 'SKU Code', 'Item Name', 'Category', 'Color', 'Size', 'Warehouse', 'Opening', 'Received', 'Issued', 'Closing', 'Min', 'Cost', 'Value', 'Status'],
+      rows: (db.readyStock || []).map((r, i) => {
+        const closing = num(r.quantity)
+        const received = num(r.receivedStock)
+        const issued = soldByStyle[String(r.styleCode || '').trim().toLowerCase()] || 0
+        const opening = Math.max(0, closing + issued - received)
+        const cost = num(r.costPrice)
+        const st = closing <= 0 ? 'Out of Stock' : closing <= num(r.lowStockLevel) ? 'Low Stock' : 'In Stock'
+        const row = i + 2
+        return [
+          i + 1,
+          r.styleCode || '',
+          r.name,
+          r.category,
+          r.color || '',
+          r.size || '',
+          r.location,
+          `=MAX(0,K${row}+J${row}-I${row})`,
+          received,
+          `=IFERROR(SUMIF(Styles!$A:$A,B${row},Styles!$J:$J),0)`,
+          closing,
+          num(r.lowStockLevel),
+          cost,
+          `=K${row}*M${row}`,
+          `=IF(K${row}<=0,"Out of Stock",IF(K${row}<=L${row},"Low Stock","In Stock"))`
+        ]
+      })
     },
     {
       name: 'Purchase Orders',
       cols: ['PO Number', 'Retailer', 'Order Date', 'Delivery Date', 'Status', 'Value', 'Notes'],
       rows: (db.purchaseOrders || []).map((r) => [r.poNumber, retailerById[r.retailerId] || '', escDate(r.orderDate), escDate(r.deliveryDate), r.status, num(r.value), r.notes])
-    },
-    {
-      name: 'Styles',
-      cols: ['Style Code', 'Style Name', 'Category', 'Sub-category', 'PO', 'Quantity', 'Price', 'Fabric', 'Trim', 'Stage', 'Stage Entered', 'Qty Dispatched', 'Notes'],
-      rows: (db.styles || []).map((r) => [r.styleCode, r.styleName, r.category, r.subCategory, poById[r.poId] || '', num(r.quantity), num(r.price), r.fabric, r.trim, r.stage, escDate(r.stageEnteredAt), num(r.qtyDispatched), r.notes])
     }
   ]
+  return sheets
 }
 
 export async function exportAllToSheet(db) {

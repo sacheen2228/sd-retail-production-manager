@@ -225,6 +225,7 @@ export default function Dashboard({ ctx }) {
         db={db}
         refresh={refresh}
         navigate={goTo}
+        can={ctx.can}
       />
     </div>
   )

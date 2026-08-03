@@ -45,7 +45,7 @@ export default function AuthScreen() {
         <div className="auth-brand">
           <div className="brand-mark">R</div>
           <div>
-            <div className="brand-name">RK Atelier</div>
+            <div className="brand-name">SD Retail</div>
             <div className="brand-sub">Production & Merchandising ERP</div>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
         <label className="field">
           <span className="field-label">Email</span>
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@atelier.com" />
+          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@sdretail.com" />
         </label>
 
         <label className="field">

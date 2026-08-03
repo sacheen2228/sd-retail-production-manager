@@ -7,7 +7,7 @@ import { useConfirm } from '../components/ConfirmDialog.jsx'
 const PO_STATUSES = ['Confirmed', 'In Production', 'On Hold', 'Dispatched']
 
 export default function Deliveries({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const { purchaseOrders, styles, retailers } = db
   const [editing, setEditing] = useState(null)
   const { push } = useToast()
@@ -120,17 +120,21 @@ export default function Deliveries({ ctx }) {
                     </td>
                     <td>
                       <div className="row-actions">
-                        {!allDone && o.styleCount > 0 && (
+                        {can('edit') && !allDone && o.styleCount > 0 && (
                           <Btn tone="success" onClick={() => dispatchOrder(o)}>
                             Mark Dispatched
                           </Btn>
                         )}
-                        <Btn tone="ghost" onClick={() => setEditing({ ...o })}>
-                          Edit
-                        </Btn>
-                        <Btn tone="danger-ghost" onClick={() => deletePO(o)} title="Delete order">
-                          ✕
-                        </Btn>
+                        {can('edit') && (
+                          <Btn tone="ghost" onClick={() => setEditing({ ...o })}>
+                            Edit
+                          </Btn>
+                        )}
+                        {can('delete') && (
+                          <Btn tone="danger-ghost" onClick={() => deletePO(o)} title="Delete order">
+                            ✕
+                          </Btn>
+                        )}
                       </div>
                     </td>
                   </tr>

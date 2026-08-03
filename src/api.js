@@ -31,7 +31,9 @@ const COLLECTIONS = {
   readyStock: {
     table: 'ready_stock',
     map: {
-      name: 'name', category: 'category', subCategory: 'sub_category', quantity: 'quantity',
+      name: 'name', styleCode: 'style_code', color: 'color', size: 'size', category: 'category',
+      subCategory: 'sub_category', quantity: 'quantity',
+      receivedStock: 'received_stock',
       costPrice: 'cost_price', sellingPrice: 'selling_price', lowStockLevel: 'low_stock_level',
       location: 'location', image: 'image', notes: 'notes'
     }
@@ -47,16 +49,21 @@ const COLLECTIONS = {
     table: 'styles',
     map: {
       poId: 'po_id', styleCode: 'style_code', styleName: 'style_name', category: 'category',
-      subCategory: 'sub_category', quantity: 'quantity', price: 'price', fabric: 'fabric',
+      subCategory: 'sub_category', color: 'color', size: 'size',
+      quantity: 'quantity', price: 'price', fabric: 'fabric',
       trim: 'trim', stage: 'stage', stageEnteredAt: 'stage_entered_at', qtyDispatched: 'qty_dispatched',
       image: 'image', notes: 'notes', history: 'history'
     }
+  },
+  profiles: {
+    table: 'profiles',
+    map: { role: 'role', email: 'email' }
   }
 }
 
 const NUMERIC_COLS = new Set([
   'stock', 'lead_time_days', 'cost_price', 'consumption', 'low_stock_level',
-  'quantity', 'selling_price', 'value', 'price', 'qty_dispatched'
+  'quantity', 'received_stock', 'selling_price', 'value', 'price', 'qty_dispatched'
 ])
 
 function todayStr() {
@@ -171,11 +178,59 @@ async function sbData() {
   return { retailers, vendors, fabrics, readyStock, purchaseOrders, styles }
 }
 
+// ----- Audit + Backup / Restore (Supabase mode) ------------------------------
+
+async function sbAudit(limit = 500) {
+  const { data, error } = await supabaseClient.supabase
+    .from('audit_log')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return (data || []).map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    action: r.action,
+    entity: r.entity,
+    entityId: r.entity_id,
+    detail: r.detail,
+    createdAt: r.created_at
+  }))
+}
+
+async function sbRestore(appDb) {
+  const order = ['retailers', 'vendors', 'fabrics', 'readyStock', 'purchaseOrders', 'styles']
+  if (!appDb || typeof appDb !== 'object') throw new Error('Invalid backup file')
+  for (const c of order) {
+    if (!Array.isArray(appDb[c])) throw new Error(`Backup is missing the "${c}" collection`)
+  }
+  const delOrder = ['styles', 'readyStock', 'purchaseOrders', 'fabrics', 'vendors', 'retailers']
+  for (const c of delOrder) {
+    const { error } = await supabaseClient.supabase
+      .from(COLLECTIONS[c].table)
+      .delete()
+      .gte('id', '00000000-0000-0000-0000-000000000000')
+    if (error) throw new Error('Restore failed clearing ' + c + ': ' + error.message)
+  }
+  const counts = {}
+  for (const c of order) {
+    for (const row of appDb[c]) {
+      const { error } = await supabaseClient.supabase.from(COLLECTIONS[c].table).insert(toDB(c, row))
+      if (error) throw new Error('Restore failed inserting into ' + c + ': ' + error.message)
+    }
+    counts[c] = appDb[c].length
+  }
+  return { ok: true, counts }
+}
+
 // ----- Excel upload (Supabase mode) ----------------------------------------
 
 const normalizeKey = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const HEADER_MAP = {
   name: ['name', 'item', 'itemname', 'product', 'productname', 'style', 'stylename', 'garment'],
+  styleCode: ['stylecode', 'style', 'styleid', 'code', 'sku', 'itemcode', 'styleno'],
+  color: ['color', 'colour', 'shade'],
+  size: ['size', 'sizes', 'garmentsize', 'fit'],
   category: ['category', 'cat'],
   subCategory: ['subcategory', 'subcat', 'sub', 'category2', 'subcategory2'],
   quantity: ['quantity', 'qty', 'qtyonhand', 'stock', 'onhand', 'pieces', 'pcs', 'nos'],
@@ -291,10 +346,23 @@ function route(method, path) {
   if (parts[0] === 'data') return { type: 'data' }
   if (parts[0] === 'reports') return { type: 'report', name: parts[1] }
   if (parts[0] === 'readyStock' && parts[1] === 'upload') return { type: 'upload' }
+  if (parts[0] === 'audit') return { type: 'audit' }
+  if (parts[0] === 'backup') return { type: method === 'POST' ? 'restore' : 'backup' }
   if (VALID.has(parts[0])) {
     return { type: 'collection', name: parts[0], id: parts[1] }
   }
   throw new Error(`Unknown route ${method} ${path}`)
+}
+
+async function sbVariantDuplicate(item, exceptId) {
+  const list = (await sbList('readyStock')) || []
+  return list.some(
+    (i) =>
+      i.id !== exceptId &&
+      String(i.styleCode || '').trim().toLowerCase() === String(item.styleCode || '').trim().toLowerCase() &&
+      String(i.color || '').trim().toLowerCase() === String(item.color || '').trim().toLowerCase() &&
+      String(i.size || '').trim().toLowerCase() === String(item.size || '').trim().toLowerCase()
+  )
 }
 
 async function supabaseApi(method, path, body) {
@@ -302,6 +370,12 @@ async function supabaseApi(method, path, body) {
   switch (r.type) {
     case 'data':
       return sbData()
+    case 'backup':
+      return sbData()
+    case 'restore':
+      return sbRestore(body || {})
+    case 'audit':
+      return sbAudit()
     case 'upload':
       return sbUploadReadyStock(body || {})
     case 'report': {
@@ -316,8 +390,18 @@ async function supabaseApi(method, path, body) {
     }
     case 'collection':
       if (method === 'GET') return r.id ? sbGet(r.name, r.id) : sbList(r.name)
-      if (method === 'POST') return sbCreate(r.name, body)
-      if (method === 'PUT') return sbUpdate(r.name, r.id, body)
+      if (method === 'POST') {
+        if (r.name === 'readyStock' && (await sbVariantDuplicate(body))) {
+          throw new Error('A variant with this Style Code + Color + Size already exists')
+        }
+        return sbCreate(r.name, body)
+      }
+      if (method === 'PUT') {
+        if (r.name === 'readyStock' && (await sbVariantDuplicate(body, r.id))) {
+          throw new Error('A variant with this Style Code + Color + Size already exists')
+        }
+        return sbUpdate(r.name, r.id, body)
+      }
       if (method === 'DELETE') return sbRemove(r.name, r.id)
       throw new Error('Unsupported method ' + method)
     default:

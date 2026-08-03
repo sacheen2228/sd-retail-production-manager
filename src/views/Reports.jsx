@@ -35,8 +35,11 @@ export default function Reports({ ctx }) {
 
   const wipExport = useMemo(() => {
     if (!wip) return null
-    const cols = ['Style Code', 'Style Name', 'Category', 'Sub-category', 'PO', 'Retailer', 'Qty', 'Dispatched', 'Stage', 'Days in Stage', 'Delivery Date', 'Days Left', 'Status']
-    const rows = wip.map((r) => [r.styleCode, r.styleName, r.category, r.subCategory, r.poNumber, r.retailer, r.quantity, r.qtyDispatched, r.stage, r.daysInStage, r.deliveryDate, r.daysLeft, r.status])
+    const cols = ['Sr', 'PO', 'Buyer', 'Style', 'Color', 'Size', 'Order Qty', 'WIP', 'Stage', 'Days', 'Dispatch', 'Status']
+    const rows = wip.map((r, i) => {
+      const row = i + 2
+      return [i + 1, r.poNumber, r.retailer, r.styleCode, r.color, r.size, r.quantity, `=G${row}-K${row}`, r.stage, r.daysInStage, r.qtyDispatched, `=IF(K${row}>0,"Dispatched","In Production")`]
+    })
     return { cols, rows }
   }, [wip])
 
@@ -59,7 +62,10 @@ export default function Reports({ ctx }) {
     if (!wipExport) return
     setExporting(true)
     exportToSheet({ sheet: 'WIP Report', ...wipExport })
-      .then((res) => push(`Exported ${res.count} rows to Google Sheets`, 'success'))
+      .then((res) => {
+        const action = res.spreadsheet ? { label: 'Open Sheet', href: res.spreadsheet } : null
+        push(`Exported ${res.count} rows to Google Sheets`, 'success', action ? { action } : {})
+      })
       .catch((e) => push(e.message, 'danger'))
       .finally(() => setExporting(false))
   }
@@ -86,37 +92,43 @@ export default function Reports({ ctx }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Style</th>
+                  <th>Sr</th>
                   <th>PO</th>
-                  <th>Retailer</th>
-                  <th>Qty</th>
+                  <th>Buyer</th>
+                  <th>Style</th>
+                  <th>Color</th>
+                  <th>Size</th>
+                  <th>Order Qty</th>
+                  <th>WIP</th>
                   <th>Stage</th>
-                  <th>Delivery</th>
-                  <th>Due</th>
+                  <th>Days</th>
+                  <th>Dispatch</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {wip.map((r, i) => (
                   <tr key={i}>
-                    <td className="strong">
-                      {r.styleCode}
-                      <div className="cell-sub">
-                        {r.styleName} · {r.category}
-                        {r.subCategory ? ` / ${r.subCategory}` : ''}
-                      </div>
-                    </td>
+                    <td className="muted">{i + 1}</td>
                     <td>{r.poNumber}</td>
                     <td>{r.retailer}</td>
-                    <td>
-                      {r.quantity}
-                      {r.qtyDispatched > 0 && <div className="cell-sub">dsp {r.qtyDispatched}</div>}
+                    <td className="strong">
+                      {r.styleCode}
+                      <div className="cell-sub">{r.styleName}</div>
                     </td>
+                    <td>{r.color || '-'}</td>
+                    <td>{r.size || '-'}</td>
+                    <td className="strong">{r.quantity}</td>
+                    <td>{r.wip}</td>
                     <td>
                       <StageBadge stage={r.stage} />
-                      <div className="cell-sub">{r.daysInStage}d in stage</div>
                     </td>
-                    <td>{r.deliveryDate || '-'}</td>
-                    <td>{r.daysLeft === null ? '—' : <DueBadge dateStr={r.deliveryDate} />}</td>
+                    <td>{r.daysInStage}d</td>
+                    <td>{r.qtyDispatched > 0 ? r.qtyDispatched : '-'}</td>
+                    <td>
+                      {r.status === 'Dispatched' ? <StageBadge stage="Dispatched" /> : <span className="muted">In Production</span>}
+                      {r.daysLeft !== null && r.status !== 'Dispatched' && r.daysLeft <= 7 && <div className="cell-sub danger-text">Due in {r.daysLeft}d</div>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

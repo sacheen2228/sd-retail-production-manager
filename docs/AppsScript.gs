@@ -33,8 +33,29 @@ function doPost(e) {
       if (!target) {
         target = s.name ? ss.insertSheet(s.name) : ss.getActiveSheet()
       }
-      if (target.getLastRow() === 0) target.appendRow(s.cols || [])
-      target.getRange(target.getLastRow() + 1, 1, s.rows.length, s.rows[0].length).setValues(s.rows)
+      // Replace (not append): each export overwrites the tab so stale rows
+      // and old column layouts never linger below the latest snapshot.
+      const header = Array.isArray(s.cols) ? s.cols : []
+      const width = Math.max(header.length, s.rows[0].length)
+      const values = [header.concat(Array(Math.max(0, width - header.length)).fill(''))]
+      for (const r of s.rows) {
+        const row = Array.isArray(r) ? r : [r]
+        values.push(row.concat(Array(Math.max(0, width - row.length)).fill('')))
+      }
+      target.clearContents()
+      if (width) {
+        const range = target.getRange(1, 1, values.length, width)
+        range.setValues(values)
+        // Any cell whose value starts with "=" is a live formula → apply via setFormula
+        for (let r = 0; r < values.length; r++) {
+          for (let c = 0; c < values[r].length; c++) {
+            const cell = values[r][c]
+            if (typeof cell === 'string' && cell.startsWith('=')) {
+              range.getCell(r + 1, c + 1).setFormula(cell)
+            }
+          }
+        }
+      }
       written += s.rows.length
     }
     return respond({ ok: true, count: written, sheets: list.length, spreadsheet: ss.getUrl() })

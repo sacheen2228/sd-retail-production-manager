@@ -21,33 +21,66 @@ export function createFake() {
     fabrics: [],
     ready_stock: [],
     purchase_orders: [],
-    styles: []
+    styles: [],
+    profiles: [],
+    audit_log: []
   }
 
   function chain(table) {
-    let filter = null
+    let filters = []
+    let limit = null
 
-    function matches(row) {
-      return !filter || row[filter.key] === filter.val
+    // Builds a thenable whose result is derived from the current filters/limit.
+    function queryable(resultFn, mutators) {
+      const t = makeThenable(() => resultFn())
+      t.eq = (key, val) => {
+        filters = filters.concat({ key, val })
+        return t
+      }
+      t.neq = (key, val) => {
+        filters = filters.concat({ key, val, negate: true })
+        return t
+      }
+      t.gte = (key, val) => {
+        filters = filters.concat({ key, val, op: 'gte' })
+        return t
+      }
+      t.order = () => t
+      t.limit = (n) => {
+        limit = n
+        return t
+      }
+      t.maybeSingle = () => makeThenable(() => resolveSingle())
+      t.single = () => makeThenable(() => resolveSingle())
+      mutators && Object.assign(t, mutators(t))
+      return t
     }
-    function resolveRows(single) {
-      const rows = tables[table].filter(matches)
-      if (single && rows.length > 1) {
+
+    function matchesRow(row) {
+      return filters.every((f) => {
+        if (f.negate) return row[f.key] !== f.val
+        if (f.op === 'gte') return row[f.key] >= f.val
+        return row[f.key] === f.val
+      })
+    }
+
+    function resolveRows() {
+      let rows = tables[table].filter(matchesRow)
+      if (limit != null) rows = rows.slice(0, limit)
+      return Promise.resolve({ data: rows, error: null })
+    }
+
+    function resolveSingle() {
+      const rows = tables[table].filter(matchesRow)
+      if (rows.length > 1) {
         return Promise.resolve({ data: rows[0], error: new Error('multiple rows returned for single()') })
       }
-      return Promise.resolve({ data: single ? rows[0] || null : rows, error: null })
+      return Promise.resolve({ data: rows[0] || null, error: null })
     }
 
-    const ops = {
+    return {
       select() {
-        const t = makeThenable(() => resolveRows(false))
-        t.eq = (key, val) => {
-          filter = { key, val }
-          return t
-        }
-        t.maybeSingle = () => makeThenable(() => resolveRows(true))
-        t.single = () => makeThenable(() => resolveRows(true))
-        return t
+        return queryable(resolveRows)
       },
       insert(obj) {
         const row = { id: crypto.randomUUID(), ...FIXED, ...obj }
@@ -73,18 +106,16 @@ export function createFake() {
         }
       },
       delete() {
-        return {
-          eq(key, val) {
-            return makeThenable(() => {
-              const idx = tables[table].findIndex((r) => r[key] === val)
-              if (idx !== -1) tables[table].splice(idx, 1)
-              return Promise.resolve({ data: null, error: null })
-            })
-          }
-        }
+        return queryable(() => {
+          const rows = tables[table].filter(matchesRow)
+          rows.forEach((r) => {
+            const idx = tables[table].indexOf(r)
+            if (idx !== -1) tables[table].splice(idx, 1)
+          })
+          return Promise.resolve({ data: null, error: null })
+        })
       }
     }
-    return ops
   }
 
   const fake = {

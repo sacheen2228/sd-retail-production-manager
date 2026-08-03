@@ -29,6 +29,8 @@ const emptyLine = () => ({
   styleName: '',
   category: 'Occasions',
   subCategory: '',
+  color: '',
+  size: '',
   quantity: '',
   price: '',
   fabric: '',
@@ -40,7 +42,7 @@ const emptyLine = () => ({
 const EMPTY_PO = { poNumber: '', retailerId: '', orderDate: '', deliveryDate: '', status: 'Confirmed', value: 0, notes: '' }
 
 export default function Orders({ ctx }) {
-  const { db, refresh } = ctx
+  const { db, refresh, can } = ctx
   const { purchaseOrders, retailers, styles } = db
   const { push } = useToast()
   const { confirm, node: confirmNode } = useConfirm()
@@ -80,6 +82,8 @@ export default function Orders({ ctx }) {
           styleName: s.styleName,
           category: s.category,
           subCategory: s.subCategory || '',
+          color: s.color || '',
+          size: s.size || '',
           quantity: s.quantity,
           price: s.price,
           fabric: s.fabric || '',
@@ -147,6 +151,8 @@ export default function Orders({ ctx }) {
         styleName: l.styleName,
         category: l.category,
         subCategory: l.subCategory,
+        color: l.color,
+        size: l.size,
         quantity: Number(l.quantity) || 0,
         price: Number(l.price) || 0,
         fabric: l.fabric,
@@ -188,7 +194,7 @@ export default function Orders({ ctx }) {
             </button>
           ))}
         </div>
-        <Btn onClick={openNew}>+ New Purchase Order</Btn>
+        {can('create') && <Btn onClick={openNew}>+ New Purchase Order</Btn>}
       </div>
 
       <Card>
@@ -222,9 +228,11 @@ export default function Orders({ ctx }) {
                       <td>{styleCount}</td>
                       <td><StageBadge stage={o.status} /></td>
                       <td>
-                        <Btn tone="ghost" onClick={(e) => { e.stopPropagation(); openEdit(o) }}>
-                          Edit
-                        </Btn>
+                        {can('edit') && (
+                          <Btn tone="ghost" onClick={(e) => { e.stopPropagation(); openEdit(o) }}>
+                            Edit
+                          </Btn>
+                        )}
                       </td>
                     </tr>
                     {expanded === o.id && (
@@ -238,8 +246,9 @@ export default function Orders({ ctx }) {
                               <thead>
                                 <tr>
                                   <th>Style</th>
+                                  <th>Color</th>
+                                  <th>Size</th>
                                   <th>Category</th>
-                                  <th>Sub-category</th>
                                   <th>Qty</th>
                                   <th>Unit Price</th>
                                   <th>Stage</th>
@@ -253,8 +262,9 @@ export default function Orders({ ctx }) {
                                       <td className="strong">
                                         {s.styleCode} — {s.styleName}
                                       </td>
+                                      <td>{s.color || '-'}</td>
+                                      <td>{s.size || '-'}</td>
                                       <td>{s.category}</td>
-                                      <td>{s.subCategory || '-'}</td>
                                       <td>{s.quantity}</td>
                                       <td>{fmtMoney(s.price)}</td>
                                       <td><StageBadge stage={s.stage} /></td>
@@ -281,7 +291,7 @@ export default function Orders({ ctx }) {
         wide
         footer={
           <>
-            {editing?.id && (
+            {editing?.id && can('delete') && (
               <Btn tone="danger-ghost" onClick={removePO}>
                 Delete PO
               </Btn>
@@ -385,6 +395,12 @@ export default function Orders({ ctx }) {
                   </Field>
                   <Field label="Sub-category">
                     <SubCatField value={l.subCategory} category={l.category} onChange={(sub) => setLine(i, { subCategory: sub })} />
+                  </Field>
+                  <Field label="Color">
+                    <Input value={l.color} onChange={(e) => setLine(i, { color: e.target.value })} placeholder="Red" />
+                  </Field>
+                  <Field label="Size">
+                    <Input value={l.size} onChange={(e) => setLine(i, { size: e.target.value })} placeholder="S / M / L / XL / Free" />
                   </Field>
                   <Field label="Order Qty">
                     <Input type="number" min="1" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} placeholder="12" />

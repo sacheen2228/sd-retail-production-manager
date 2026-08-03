@@ -130,7 +130,7 @@ function exportPo(db, po) {
 // ---------------------------------------------------------------------------
 
 function PoDetail({ row, ctx }) {
-  const { db, refresh, navigate, push, openKind } = ctx
+  const { db, refresh, navigate, push, openKind, can } = ctx
   const po = row.po
   const stylesFor = db.styles.filter((s) => s.poId === po.id)
   const r = db.retailers.find((x) => x.id === po.retailerId)
@@ -161,9 +161,11 @@ function PoDetail({ row, ctx }) {
   return (
     <div className="dd-detail">
       <div className="dd-actions">
-        <Btn onClick={() => markDispatched(db, refresh, po, push)} disabled={po.status === 'Dispatched'}>
-          ✓ Mark Dispatched
-        </Btn>
+        {can('edit') && (
+          <Btn onClick={() => markDispatched(db, refresh, po, push)} disabled={po.status === 'Dispatched'}>
+            ✓ Mark Dispatched
+          </Btn>
+        )}
         <Btn tone="ghost" onClick={() => navigate('orders')}>
           Edit in Purchase Orders
         </Btn>
@@ -261,7 +263,7 @@ function PoDetail({ row, ctx }) {
 }
 
 function StyleDetail({ row, ctx }) {
-  const { db, refresh, navigate, push, openKind } = ctx
+  const { db, refresh, navigate, push, openKind, can } = ctx
   const s = row.style
   const po = db.purchaseOrders.find((o) => o.id === s.poId)
   const nextStage = s.stage === 'Dispatched' ? null : STAGES[stageIndex(s.stage) + 1]
@@ -270,9 +272,11 @@ function StyleDetail({ row, ctx }) {
   return (
     <div className="dd-detail">
       <div className="dd-actions">
-        <Btn onClick={() => advanceStyle(db, refresh, s, push)} disabled={!nextStage}>
-          {nextStage ? `Advance to ${nextStage} ▶` : 'Fully Dispatched'}
-        </Btn>
+        {can('edit') && (
+          <Btn onClick={() => advanceStyle(db, refresh, s, push)} disabled={!nextStage}>
+            {nextStage ? `Advance to ${nextStage} ▶` : 'Fully Dispatched'}
+          </Btn>
+        )}
         <Btn tone="ghost" onClick={() => navigate('tracker')}>
           Edit in Production Tracker
         </Btn>
