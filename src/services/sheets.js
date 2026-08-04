@@ -119,3 +119,13 @@ export async function exportToSheet({ sheet = '', cols, rows }) {
   if (!Array.isArray(rows) || !rows.length) throw new Error('Nothing to export')
   return post({ sheets: [{ name: sheet || 'Export', cols, rows }] })
 }
+
+/**
+ * Pull a named tab back from the Google Sheet (reverse of export).
+ * The Apps Script must expose a `read` action (see docs/SHEET_EXPORT.md).
+ * Returns { cols, rows, spreadsheet }.
+ */
+export async function readSheet(name) {
+  if (!name) throw new Error('No sheet name given')
+  return post({ action: 'read', sheet: name })
+}

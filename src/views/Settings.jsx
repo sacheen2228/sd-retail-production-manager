@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { authEnabled, getCurrentUser, updatePassword } from '../services/auth.js'
+import { readSheetData, diffSheetData, applyImport, TAB_ORDER, totalChanges } from '../services/sheetImport.js'
 import { Card, Btn, Badge, Select, Empty } from '../components/ui.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
@@ -34,6 +35,10 @@ export default function Settings({ ctx }) {
   const [busy, setBusy] = useState(false)
   const [pwState, setPwState] = useState({ pw: '', confirm: '' })
   const [pwBusy, setPwBusy] = useState(false)
+  const [sheetTabs, setSheetTabs] = useState(null)
+  const [sheetPlans, setSheetPlans] = useState(null)
+  const [sheetBusy, setSheetBusy] = useState(false)
+  const [applyBusy, setApplyBusy] = useState(false)
   const restoreRef = useRef(null)
 
   useEffect(() => {
@@ -131,12 +136,55 @@ export default function Settings({ ctx }) {
     }
   }
 
+  async function readSheets() {
+    setSheetBusy(true)
+    setSheetPlans(null)
+    try {
+      const { tabs } = await readSheetData()
+      setSheetTabs(tabs)
+      const plans = diffSheetData(db, tabs)
+      setSheetPlans(plans)
+      const ok = tabs.filter((t) => t.status === 'ok').length
+      const { added, updated } = totalChanges(plans)
+      push(`Read ${ok}/${tabs.length} tabs — ${added} new rows, ${updated} updates`, ok === tabs.length ? 'success' : 'warn')
+    } catch (e) {
+      push('Read failed: ' + e.message, 'danger')
+    } finally {
+      setSheetBusy(false)
+    }
+  }
+
+  async function applySheets() {
+    const { added, updated } = totalChanges(sheetPlans)
+    confirm({
+      title: 'Apply sheet changes',
+      message: `Update the app with ${added} new and ${updated} updated records from the Google Sheet? Rows are matched by key and updated in place; nothing is deleted.`,
+      tone: 'warn',
+      confirmLabel: 'Apply'
+    }).then(async (ok) => {
+      if (!ok) return
+      setApplyBusy(true)
+      try {
+        const res = await applyImport(sheetPlans)
+        const total = Object.values(res.counts).reduce((a, c) => a + c.added + c.updated, 0)
+        push(`Imported ${total} records from Google Sheets`, 'success')
+        await refresh()
+        setSheetPlans(null)
+      } catch (e) {
+        push('Import failed: ' + e.message, 'danger')
+      } finally {
+        setApplyBusy(false)
+      }
+    })
+  }
+
   const tabs = [
     { id: 'backup', label: 'Backup & Restore' },
     { id: 'audit', label: 'Audit Log' }
   ]
   if (can('manage')) tabs.push({ id: 'roles', label: 'Roles & Permissions' })
   if (authEnabled) tabs.push({ id: 'account', label: 'My Account' })
+  tabs.push({ id: 'sheet', label: 'Sheet Sync' })
 
   const entityOptions = ['All', 'retailers', 'vendors', 'fabrics', 'readyStock', 'purchaseOrders', 'styles']
   const shownAudit = entityFilter === 'All' ? audit : audit.filter((a) => a.entity === entityFilter)
@@ -323,6 +371,82 @@ export default function Settings({ ctx }) {
             </form>
           </Card>
         </div>
+      )}
+
+      {tab === 'sheet' && (
+        <Card
+          title="Import from Google Sheets"
+          action={
+            <Btn tone="ghost" onClick={readSheets} disabled={sheetBusy}>
+              {sheetBusy ? 'Reading…' : '⇣ Read Google Sheet'}
+            </Btn>
+          }
+        >
+          <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+            Export your data to Google Sheets first (sidebar → "Export all data to Sheets"), edit the tabs there,
+            then read them back here. Edits are applied to the app only after you confirm — rows are matched by key
+            and updated in place, nothing is deleted.
+          </p>
+
+          {!sheetPlans && (
+            <div className="muted" style={{ fontSize: 13 }}>
+              Press "Read Google Sheet" to load every tab and preview the changes. If a tab fails to load, the Apps
+              Script needs the read action — see docs/SHEET_EXPORT.md.
+            </div>
+          )}
+
+          {sheetPlans && (
+            <>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Tab</th>
+                    <th>Rows</th>
+                    <th>New</th>
+                    <th>Update</th>
+                    <th>Skipped</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TAB_ORDER.map((t) => {
+                    const p = sheetPlans[t]
+                    const rows = sheetTabs?.find((x) => x.name === t)?.rows.length || 0
+                    return (
+                      <tr key={t}>
+                        <td className="strong">{t}</td>
+                        <td>{rows}</td>
+                        <td>{p.added}</td>
+                        <td>{p.updated}</td>
+                        <td className="muted">{p.skipped}</td>
+                        <td>
+                          {p.error ? <Badge tone="danger">error</Badge> : <Badge tone="success">ok</Badge>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {sheetPlans[TAB_ORDER[0]].error && (
+                <div className="field-error">
+                  At least one tab failed to load — update the Apps Script with the read action (docs/SHEET_EXPORT.md)
+                  and try again.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <Btn
+                  onClick={applySheets}
+                  disabled={applyBusy || totalChanges(sheetPlans).added + totalChanges(sheetPlans).updated === 0}
+                >
+                  {applyBusy ? 'Applying…' : '⇩ Apply changes to app'}
+                </Btn>
+                <Btn tone="ghost" onClick={readSheets} disabled={sheetBusy}>
+                  ↻ Re-read
+                </Btn>
+              </div>
+            </>
+          )}
+        </Card>
       )}
 
       {confirmNode}
