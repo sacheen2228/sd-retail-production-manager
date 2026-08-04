@@ -2,6 +2,10 @@
 
 A production and merchandising management system for **SD Retail**. It digitises the complete workflow from retailer purchase orders and style-wise job cards to the daily work-in-progress tracker, delivery deadlines and WIP reports.
 
+## How to Use
+
+Step-by-step guide with the full workflow for every tab (Dashboard, Purchase Orders, Production Tracker, Calendar, Deliveries, Stock Report, Reports, Partners & Stock, Settings): **[docs/HOW_TO_USE.md](docs/HOW_TO_USE.md)**
+
 ## Features
 
 - **Dashboard** — live KPIs: active orders, styles in production, at-risk deliveries, pipeline value; production pipeline view; upcoming deliveries; order value by retailer. Plus an **Alerts & Reminders** feed: overdue deliveries, stuck stages, sampling approvals pending, low fabric/trim stock.
