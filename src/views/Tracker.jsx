@@ -45,6 +45,8 @@ export default function Tracker({ ctx }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(new Set())
   const [bulkStage, setBulkStage] = useState('')
+  const [view, setView] = useState('table')
+  const [dragId, setDragId] = useState(null)
   const { push } = useToast()
   const { confirm, node: confirmNode } = useConfirm()
 
@@ -79,17 +81,22 @@ export default function Tracker({ ctx }) {
     setSelected(new Set())
   }
 
+  function changeStage(style, nextStage) {
+    if (!nextStage || nextStage === style.stage) return
+    api
+      .put('/api/styles/' + style.id, {
+        stage: nextStage,
+        stageEnteredAt: new Date().toISOString().slice(0, 10),
+        ...(nextStage === 'Dispatched' ? { qtyDispatched: style.quantity } : {})
+      })
+      .then(refresh)
+  }
+
   function moveStage(style, dir) {
     const idx = stageIndex(style.stage)
     const next = Math.min(STAGES.length - 1, Math.max(0, idx + dir))
     if (next === idx) return
-    api
-      .put('/api/styles/' + style.id, {
-        stage: STAGES[next],
-        stageEnteredAt: new Date().toISOString().slice(0, 10),
-        ...(STAGES[next] === 'Dispatched' ? { qtyDispatched: style.quantity } : {})
-      })
-      .then(refresh)
+    changeStage(style, STAGES[next])
   }
 
   function advanceSelected() {
@@ -213,11 +220,86 @@ export default function Tracker({ ctx }) {
               </option>
             ))}
           </select>
+          <div className="toolbar-tabs">
+            <button className={`chip ${view === 'table' ? 'active' : ''}`} onClick={() => setView('table')}>
+              List
+            </button>
+            <button className={`chip ${view === 'kanban' ? 'active' : ''}`} onClick={() => setView('kanban')}>
+              Board
+            </button>
+          </div>
         </div>
         {can('create') && <Btn onClick={openNew}>+ New Style / Job Card</Btn>}
       </div>
 
+      {view === 'kanban' && (
+        <div className="kanban">
+          {STAGES.map((stage) => {
+            const cards = list.filter((s) => s.stage === stage)
+            return (
+              <div
+                key={stage}
+                className={`kanban-col${dragId ? ' kanban-drop' : ''}${stage === 'Dispatched' ? ' kanban-done' : ''}`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const id = dragId
+                  setDragId(null)
+                  const style = styles.find((s) => s.id === id)
+                  if (style && style.stage !== stage) changeStage(style, stage)
+                }}
+              >
+                <div className="kanban-head">
+                  {stage}
+                  <span className="kanban-count">{cards.length}</span>
+                </div>
+                <div className="kanban-body">
+                  {cards.length === 0 ? (
+                    <div className="kanban-empty">—</div>
+                  ) : (
+                    cards.map((s) => {
+                      const po = poById[s.poId]
+                      const idx = stageIndex(s.stage)
+                      return (
+                        <div
+                          key={s.id}
+                          className="kanban-card"
+                          draggable={can('edit')}
+                          onDragStart={(e) => setDragId(s.id)}
+                          onDragEnd={() => setDragId(null)}
+                        >
+                          {s.image && <img className="kanban-thumb" src={s.image} alt="" />}
+                          <div className="kanban-card-main">
+                            <div className="kanban-code">{s.styleCode}</div>
+                            {s.styleName && <div className="kanban-name">{s.styleName}</div>}
+                            <div className="kanban-meta">
+                              <span>◈ {s.quantity}</span>
+                              <span className="muted">{s.size || ''}</span>
+                            </div>
+                            {po && <div className="kanban-sub">{po.poNumber} · {rName(po.retailerId)}</div>}
+                            <div className="kanban-sub">⏱ {daysInStage(s)}d{s.fabric ? ' · ' + s.fabric : ''}</div>
+                          </div>
+                          {can('edit') && (
+                            <div className="kanban-actions">
+                              <Btn tone="ghost" className="btn-ic" onClick={() => moveStage(s, -1)} disabled={idx === 0} title="Previous stage">◀</Btn>
+                              <Btn tone="ghost" className="btn-ic" onClick={() => setEditing({ ...s })} title="Edit">✎</Btn>
+                              <Btn tone="ghost" className="btn-ic" onClick={() => moveStage(s, 1)} disabled={idx === STAGES.length - 1} title="Advance stage">▶</Btn>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       <Card>
+        {view === 'table' && (
+          <>
         {selected.size > 0 && (
           <div className="bulk-bar">
             <span className="bulk-count">{selected.size} selected</span>
@@ -334,6 +416,8 @@ export default function Tracker({ ctx }) {
               })}
             </tbody>
           </table>
+        )}
+          </>
         )}
       </Card>
 
