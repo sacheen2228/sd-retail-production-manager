@@ -260,7 +260,8 @@ export async function applyImport(plans) {
           const mode = rec.__create ? 'NEW' : 'UP'
           const idRaw = rec.id
           const idLabel = idRaw === undefined ? 'UNDEF' : idRaw === null ? 'NULL' : idRaw === '' ? 'EMPTY' : String(idRaw).slice(0, 8)
-          errors.push({ tab, key: `${mode} ${String(body.poNumber || body.styleCode || body.name || '?')} [id=${idLabel}]`, message: err.message })
+          const pg = err && (typeof err === 'object') ? `${err.code || ''}${err.details ? ` | ${err.details}` : ''}${err.hint ? ` | hint: ${err.hint}` : ''}`.trim() : ''
+          errors.push({ tab, key: `${mode} ${String(body.poNumber || body.styleCode || body.name || '?')} [id=${idLabel}]`, message: err.message, pg })
         }
       }
     }

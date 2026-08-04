@@ -463,6 +463,7 @@ export default function Settings({ ctx }) {
               {sheetErrors.map((er, i) => (
                 <div key={i} style={{ marginBottom: 4 }}>
                   • {er.tab} — {er.key}: {er.message}
+                  {er.pg ? `   [${er.pg}]` : ''}
                 </div>
               ))}
             </div>
