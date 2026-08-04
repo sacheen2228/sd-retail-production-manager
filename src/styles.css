@@ -554,6 +554,34 @@ body {
   min-width: 260px;
 }
 
+.input-label-sm {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.range-input {
+  width: 90px;
+}
+
+.report-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.report-filters .search {
+  max-width: 220px;
+}
+
+.range-sep {
+  color: var(--muted);
+  padding: 0 4px;
+  font-size: 13px;
+}
+
 .expanded-row td {
   background: #fbf9f6;
 }

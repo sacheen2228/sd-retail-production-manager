@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeOverview, computeAlerts, computeWip, computeFabricStock } from '../src/services/reports.js'
+import { computeOverview, computeAlerts, computeWip, computeFabricStock, computeMerchandising } from '../src/services/reports.js'
 
 const base = {
   retailers: [{ id: 'r1', name: 'AZA Fashion' }],
@@ -42,5 +42,46 @@ describe('reports', () => {
     const silk = rows.find((r) => r.name === 'Silk')
     expect(silk.allocated).toBe(50)
     expect(silk.available).toBe(50)
+  })
+
+  it('computes merchandising sell-through, GMROI and turn', () => {
+    const db = {
+      retailers: [{ id: 'r1', name: 'AZA Fashion' }],
+      purchaseOrders: [{ id: 'p1', poNumber: 'PO-1', retailerId: 'r1', deliveryDate: '2026-12-01', status: 'Dispatched', value: 200000 }],
+      styles: [
+        { id: 's1', poId: 'p1', styleCode: 'BR-1', styleName: 'Lehenga', stage: 'Dispatched', quantity: 10, qtyDispatched: 6, price: 20000, costPrice: 12000, history: [{ at: '2026-07-01', from: null, to: 'Sampling' }, { at: '2026-07-20', from: 'Stitching', to: 'Dispatched' }] }
+      ],
+      fabrics: [],
+      vendors: [],
+      readyStock: [{ id: 'rs1', name: 'Lehenga', styleCode: 'BR-1', quantity: 4, costPrice: 12000, createdAt: '2026-07-10' }]
+    }
+    const m = computeMerchandising(db)
+    // 6 sold, 4 on hand => 60% sell-through
+    expect(m.summary.sellThroughPct).toBeCloseTo(60)
+    expect(m.summary.totalSold).toBe(6)
+    expect(m.summary.totalOnHand).toBe(4)
+    // gross profit = 6 * (20000 - 12000) = 48000; inventory = 4 * 12000 = 48000 => GMROI 1x
+    expect(m.summary.grossProfit).toBe(48000)
+    expect(m.summary.inventoryValue).toBe(48000)
+    expect(m.summary.gmroi).toBeCloseTo(1)
+    // avg production time 19 days
+    expect(m.summary.avgProductionDays).toBe(19)
+    expect(m.bestSellers[0].styleCode).toBe('BR-1')
+    expect(m.stockAging[0].pieces).toBe(4)
+  })
+
+  it('flags unsold on-hand stock as slow sellers', () => {
+    const db = {
+      retailers: [],
+      purchaseOrders: [],
+      styles: [],
+      fabrics: [],
+      vendors: [],
+      readyStock: [{ id: 'rs1', name: 'Old Saree', styleCode: 'SR-9', quantity: 8, costPrice: 5000, createdAt: '2026-06-01' }]
+    }
+    const m = computeMerchandising(db)
+    expect(m.slowSellers.length).toBe(1)
+    expect(m.slowSellers[0].styleCode).toBe('SR-9')
+    expect(m.summary.sellThroughPct).toBe(0)
   })
 })

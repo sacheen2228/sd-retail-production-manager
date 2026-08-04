@@ -47,6 +47,12 @@ export default function Stock({ ctx }) {
   const [sizeFilter, setSizeFilter] = useState('')
   const [outOnly, setOutOnly] = useState(false)
   const [groupMode, setGroupMode] = useState(false)
+  const [locationFilter, setLocationFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [qtyMin, setQtyMin] = useState('')
+  const [qtyMax, setQtyMax] = useState('')
+  const [valueMin, setValueMin] = useState('')
+  const [valueMax, setValueMax] = useState('')
   const [scanActive, setScanActive] = useState(false)
   const [scanValue, setScanValue] = useState('')
   const [highlight, setHighlight] = useState(null)
@@ -61,6 +67,7 @@ export default function Stock({ ctx }) {
 
   const colors = useMemo(() => [...new Set(items.map((i) => String(i.color || '').trim()).filter(Boolean))].sort(), [items])
   const sizes = useMemo(() => [...new Set(items.map((i) => String(i.size || '').trim()).filter(Boolean))].sort(), [items])
+  const locations = useMemo(() => [...new Set(items.map((i) => String(i.location || '').trim()).filter(Boolean))].sort(), [items])
 
   const soldByStyle = useMemo(() => {
     const map = {}
@@ -92,6 +99,11 @@ export default function Stock({ ctx }) {
     const sc = styleFilter.trim().toLowerCase()
     const col = colorFilter.toLowerCase()
     const sz = sizeFilter.toLowerCase()
+    const loc = locationFilter.toLowerCase()
+    const qLo = qtyMin === '' ? null : Number(qtyMin)
+    const qHi = qtyMax === '' ? null : Number(qtyMax)
+    const vLo = valueMin === '' ? null : Number(valueMin)
+    const vHi = valueMax === '' ? null : Number(valueMax)
     return items
       .filter((i) => category === 'All' || i.category === category)
       .filter((i) => sub === 'All' || i.subCategory === sub)
@@ -99,9 +111,16 @@ export default function Stock({ ctx }) {
       .filter((i) => !sc || String(i.styleCode || '').trim().toLowerCase() === sc)
       .filter((i) => !col || String(i.color || '').trim().toLowerCase() === col)
       .filter((i) => !sz || String(i.size || '').trim().toLowerCase() === sz)
+      .filter((i) => !loc || String(i.location || '').trim().toLowerCase() === loc)
+      .filter((i) => statusFilter === 'All' || statusFor(i).label === statusFilter)
+      .filter((i) => (qLo === null || (Number(i.quantity) || 0) >= qLo) && (qHi === null || (Number(i.quantity) || 0) <= qHi))
+      .filter((i) => {
+        const v = (Number(i.quantity) || 0) * (Number(i.costPrice) || 0)
+        return (vLo === null || v >= vLo) && (vHi === null || v <= vHi)
+      })
       .filter((i) => !outOnly || (Number(i.quantity) || 0) <= 0)
       .sort((a, b) => String(a.styleCode || '').localeCompare(String(b.styleCode || '')) || String(a.category).localeCompare(String(b.category)))
-  }, [items, category, sub, search, styleFilter, colorFilter, sizeFilter, outOnly])
+  }, [items, category, sub, search, styleFilter, colorFilter, sizeFilter, locationFilter, statusFilter, qtyMin, qtyMax, valueMin, valueMax, outOnly])
 
   const groups = useMemo(() => {
     const map = new Map()
@@ -223,13 +242,7 @@ export default function Stock({ ctx }) {
       push(`No ready-stock item found for "${scanValue.trim()}"`, 'danger')
       return
     }
-    setCategory('All')
-    setSub('All')
-    setSearch('')
-    setStyleFilter('')
-    setColorFilter('')
-    setSizeFilter('')
-    setOutOnly(false)
+    clearFilters()
     setScanValue('')
     setScanActive(false)
     requestAnimationFrame(() => {
@@ -237,6 +250,22 @@ export default function Stock({ ctx }) {
       document.getElementById('stock-row-' + match.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     })
     setTimeout(() => setHighlight(null), 2600)
+  }
+
+  function clearFilters() {
+    setCategory('All')
+    setSub('All')
+    setSearch('')
+    setStyleFilter('')
+    setColorFilter('')
+    setSizeFilter('')
+    setLocationFilter('All')
+    setStatusFilter('All')
+    setQtyMin('')
+    setQtyMax('')
+    setValueMin('')
+    setValueMax('')
+    setOutOnly(false)
   }
 
   function exportCSV() {
@@ -358,6 +387,18 @@ export default function Stock({ ctx }) {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          <select className="input input-sm" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+            <option value="">All warehouses</option>
+            {locations.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select className="input input-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
           <label className="filter-check">
             <input type="checkbox" checked={outOnly} onChange={(e) => setOutOnly(e.target.checked)} />
             Out of stock only
@@ -366,6 +407,22 @@ export default function Stock({ ctx }) {
             <input type="checkbox" checked={groupMode} onChange={(e) => setGroupMode(e.target.checked)} />
             Group by style
           </label>
+        </div>
+      </div>
+
+      <div className="view-toolbar">
+        <div className="toolbar-left">
+          <span className="input-label-sm">Qty</span>
+          <input className="input input-sm range-input" type="number" min="0" placeholder="Min" value={qtyMin} onChange={(e) => setQtyMin(e.target.value)} />
+          <span className="range-sep">–</span>
+          <input className="input input-sm range-input" type="number" min="0" placeholder="Max" value={qtyMax} onChange={(e) => setQtyMax(e.target.value)} />
+          <span className="range-sep" style={{ marginLeft: 14 }}>Value (₹)</span>
+          <input className="input input-sm range-input" type="number" min="0" placeholder="Min" value={valueMin} onChange={(e) => setValueMin(e.target.value)} />
+          <span className="range-sep">–</span>
+          <input className="input input-sm range-input" type="number" min="0" placeholder="Max" value={valueMax} onChange={(e) => setValueMax(e.target.value)} />
+          <Btn tone="ghost" onClick={clearFilters} disabled={!search && category === 'All' && sub === 'All' && !styleFilter && !colorFilter && !sizeFilter && locationFilter === 'All' && statusFilter === 'All' && !qtyMin && !qtyMax && !valueMin && !valueMax && !outOnly}>
+            Clear all
+          </Btn>
         </div>
       </div>
 

@@ -16,6 +16,7 @@ const Calendar = lazy(() => import('./views/Calendar.jsx'))
 const Deliveries = lazy(() => import('./views/Deliveries.jsx'))
 const Stock = lazy(() => import('./views/Stock.jsx'))
 const Reports = lazy(() => import('./views/Reports.jsx'))
+const Merchandising = lazy(() => import('./views/Merchandising.jsx'))
 const Partners = lazy(() => import('./views/Partners.jsx'))
 const Settings = lazy(() => import('./views/Settings.jsx'))
 
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'deliveries', label: 'Deliveries', icon: '❖', key: 'v' },
   { id: 'stock', label: 'Stock Report', icon: '▣', key: 's' },
   { id: 'reports', label: 'Reports', icon: '≡', key: 'r' },
+  { id: 'merchandising', label: 'Merchandising', icon: '◎', key: 'm' },
   { id: 'partners', label: 'Partners & Stock', icon: '✦', key: 'p' },
   { id: 'settings', label: 'Settings', icon: '⚙', key: 'g' }
 ]
@@ -39,6 +41,7 @@ const VIEWS = {
   deliveries: Deliveries,
   stock: Stock,
   reports: Reports,
+  merchandising: Merchandising,
   partners: Partners,
   settings: Settings
 }
@@ -95,6 +98,7 @@ function Shell() {
     'c': () => navigate('calendar'),
     's': () => navigate('stock'),
     'r': () => navigate('reports'),
+    'm': () => navigate('merchandising'),
     'p': () => navigate('partners'),
     'Escape': () => { setNavOpen(false); setSearchOpen(false) }
   })

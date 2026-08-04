@@ -1,5 +1,5 @@
 import { supabaseClient } from './services/supabaseClient.js'
-import { computeOverview, computeAlerts, computeWip, computeFabricStock } from './services/reports.js'
+import { computeOverview, computeAlerts, computeWip, computeFabricStock, computeMerchandising } from './services/reports.js'
 
 // ---------------------------------------------------------------------------
 // Data access layer.
@@ -386,6 +386,7 @@ async function supabaseApi(method, path, body) {
         case 'alerts': return computeAlerts(db)
         case 'wip': return computeWip(db)
         case 'stock': return computeFabricStock(db)
+        case 'merchandising': return computeMerchandising(db)
         default: throw new Error('Unknown report ' + r.name)
       }
     }

@@ -214,23 +214,29 @@ function monthKey(dateStr) {
 /**
  * Cost vs. selling profit, joined through each style's PO for order date/retailer.
  * `range` = { from?: 'YYYY-MM-DD', to?: 'YYYY-MM-DD' } filtering by PO order date.
+ * `opts` = { retailer?: string, category?: string } additional filters.
  */
-export function computeProfit(db, range = {}) {
+export function computeProfit(db, range = {}, opts = {}) {
   const { from, to } = range || {}
+  const { retailer, category } = opts || {}
   const rows = []
   ;(db.styles || []).forEach((s) => {
     const po = (db.purchaseOrders || []).find((o) => o.id === s.poId)
     if (!po) return
     if (!inRange(po.orderDate, from, to)) return
+    const retailerName = ((db.retailers || []).find((r) => r.id === po.retailerId) || {}).name || '-'
+    if (retailer && retailerName !== retailer) return
+    if (category && s.category !== category) return
     const qty = Number(s.quantity) || 0
     const sell = qty * (Number(s.price) || 0)
     const cost = qty * (Number(s.costPrice) || 0)
     rows.push({
       styleCode: s.styleCode,
       styleName: s.styleName,
+      category: s.category,
       poId: po.id,
       poNumber: po.poNumber,
-      retailer: ((db.retailers || []).find((r) => r.id === po.retailerId) || {}).name || '-',
+      retailer: retailerName,
       orderDate: po.orderDate,
       month: monthKey(po.orderDate),
       qty,
@@ -306,3 +312,194 @@ export function computeFabricRequirement(db) {
 }
 
 export { STAGES }
+
+/**
+ * Data-driven merchandising analytics for the Merchandising tab.
+ * Returns sell-through, GMROI, inventory turn, best/slow sellers, fabric
+ * consumption, vendor performance, avg production time and stock aging.
+ */
+export function computeMerchandising(db) {
+  const styles = db.styles || []
+  const orders = db.purchaseOrders || []
+  const retailers = db.retailers || []
+  const readyStock = db.readyStock || []
+  const fabrics = db.fabrics || []
+  const vendors = db.vendors || []
+  const rName = (id) => (retailers.find((r) => r.id === id) || {}).name || '-'
+
+  // ---- aggregate sold + on-hand by style code ----
+  const byCode = {}
+  const ensure = (code) => {
+    if (!byCode[code]) byCode[code] = { sold: 0, onHand: 0, sellValue: 0, costValue: 0, name: '', category: '', color: '', size: '' }
+    return byCode[code]
+  }
+  styles.forEach((s) => {
+    const code = String(s.styleCode || '').trim()
+    if (!code) return
+    const g = ensure(code)
+    g.sold += Number(s.qtyDispatched) || 0
+    g.sellValue += (Number(s.qtyDispatched) || 0) * (Number(s.price) || 0)
+    g.costValue += (Number(s.qtyDispatched) || 0) * (Number(s.costPrice) || 0)
+    if (!g.name) g.name = s.styleName
+    if (!g.category) g.category = s.category
+    if (!g.color) g.color = s.color || ''
+    if (!g.size) g.size = s.size || ''
+  })
+  readyStock.forEach((r) => {
+    const code = String(r.styleCode || '').trim()
+    if (!code) return
+    const g = ensure(code)
+    g.onHand += Number(r.quantity) || 0
+    if (!g.name) g.name = r.name
+    if (!g.category) g.category = r.category
+    if (!g.color) g.color = r.color || ''
+    if (!g.size) g.size = r.size || ''
+  })
+
+  const codeRows = Object.entries(byCode).map(([code, g]) => {
+    const total = g.sold + g.onHand
+    return {
+      styleCode: code,
+      name: g.name,
+      category: g.category,
+      color: g.color,
+      size: g.size,
+      sold: g.sold,
+      onHand: g.onHand,
+      total,
+      sellThrough: total > 0 ? (g.sold / total) * 100 : 0,
+      sellValue: g.sellValue,
+      costValue: g.costValue
+    }
+  })
+
+  const totalSold = codeRows.reduce((s, r) => s + r.sold, 0)
+  const totalOnHand = codeRows.reduce((s, r) => s + r.onHand, 0)
+  const sellThroughPct = totalSold + totalOnHand > 0 ? (totalSold / (totalSold + totalOnHand)) * 100 : 0
+
+  // ---- gross profit + COGS from dispatched styles ----
+  const dispatched = styles.filter((s) => s.stage === 'Dispatched')
+  const grossProfit = dispatched.reduce((sum, s) => sum + (Number(s.qtyDispatched) || 0) * ((Number(s.price) || 0) - (Number(s.costPrice) || 0)), 0)
+  const cogs = dispatched.reduce((sum, s) => sum + (Number(s.qtyDispatched) || 0) * (Number(s.costPrice) || 0), 0)
+  const inventoryValue = readyStock.reduce((sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.costPrice) || 0), 0)
+
+  const gmroi = inventoryValue > 0 ? grossProfit / inventoryValue : 0
+  const inventoryTurn = inventoryValue > 0 ? cogs / inventoryValue : 0
+
+  // ---- average production time (first stage entry -> dispatched) ----
+  const prodTimes = []
+  dispatched.forEach((s) => {
+    const h = Array.isArray(s.history) ? s.history : []
+    const firstAt = h.length ? h[0].at : s.createdAt
+    const disp = h.find((e) => e.to === 'Dispatched')
+    const endAt = disp ? disp.at : s.stageEnteredAt
+    if (!firstAt || !endAt) return
+    const start = new Date(String(firstAt).slice(0, 10) + 'T00:00:00')
+    const end = new Date(String(endAt).slice(0, 10) + 'T00:00:00')
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return
+    const days = Math.round((end - start) / 86400000)
+    if (days >= 0) prodTimes.push(days)
+  })
+  const avgProductionDays = prodTimes.length ? Math.round(prodTimes.reduce((a, b) => a + b, 0) / prodTimes.length) : null
+
+  // ---- best / slow sellers ----
+  const withDemand = codeRows.filter((r) => r.sold > 0).sort((a, b) => b.sold - a.sold)
+  const bestSellers = withDemand.slice(0, 5)
+  const slowSellers = codeRows
+    .filter((r) => r.onHand > 0 && r.sold === 0)
+    .sort((a, b) => b.onHand - a.onHand)
+    .slice(0, 5)
+
+  // ---- vendor performance (from fabrics/trims supplied) ----
+  const vendorMap = {}
+  fabrics.forEach((f) => {
+    const v = String(f.vendor || '').trim()
+    if (!v) return
+    const g = (vendorMap[v] = vendorMap[v] || { name: v, items: 0, stockValue: 0, avgLead: 0, leadSum: 0, lowItems: 0, reorderItems: 0 })
+    g.items++
+    g.stockValue += (Number(f.stock) || 0) * (Number(f.costPrice) || 0)
+    g.leadSum += Number(f.leadTimeDays) || 0
+    const stock = Number(f.stock) || 0
+    const low = Number(f.lowStockLevel) || 30
+    if (stock <= low) g.lowItems++
+    const cons = Number(f.consumption) || 0
+    const allocated = styles
+      .filter((s) => s.stage !== 'Dispatched' && (String(s.fabric || '').trim().toLowerCase() === f.name.toLowerCase() || String(s.trim || '').trim().toLowerCase() === f.name.toLowerCase()))
+      .reduce((sum, s) => sum + (Number(s.quantity) || 0) * cons, 0)
+    if (stock - allocated < 0) g.reorderItems++
+  })
+  const vendorPerformance = Object.values(vendorMap)
+    .map((v) => ({ ...v, avgLead: v.items ? Math.round(v.leadSum / v.items) : 0 }))
+    .sort((a, b) => b.stockValue - a.stockValue)
+
+  // ---- stock aging buckets ----
+  const buckets = [
+    { bucket: '0–30 days', min: 0, max: 30 },
+    { bucket: '31–60 days', min: 31, max: 60 },
+    { bucket: '61–90 days', min: 61, max: 90 },
+    { bucket: '90+ days', min: 91, max: Infinity }
+  ]
+  const aging = buckets.map((b) => ({ bucket: b.bucket, items: 0, pieces: 0, value: 0 }))
+  readyStock.forEach((r) => {
+    const created = r.createdAt ? new Date(String(r.createdAt).slice(0, 10) + 'T00:00:00') : null
+    const ageDays = created && !Number.isNaN(created.getTime()) ? Math.floor((new Date() - created) / 86400000) : null
+    if (ageDays === null) return
+    const bucket = buckets.find((b) => ageDays >= b.min && ageDays <= b.max)
+    if (!bucket) return
+    const row = aging[buckets.indexOf(bucket)]
+    row.items++
+    row.pieces += Number(r.quantity) || 0
+    row.value += (Number(r.quantity) || 0) * (Number(r.costPrice) || 0)
+  })
+
+  // ---- fabric consumption (allocated vs stock) ----
+  const fabricConsumption = fabrics.map((f) => {
+    const cons = Number(f.consumption) || 0
+    const allocated = styles
+      .filter((s) => s.stage !== 'Dispatched' && (String(s.fabric || '').trim().toLowerCase() === f.name.toLowerCase() || String(s.trim || '').trim().toLowerCase() === f.name.toLowerCase()))
+      .reduce((sum, s) => sum + (Number(s.quantity) || 0) * cons, 0)
+    const stock = Number(f.stock) || 0
+    const available = stock - allocated
+    return {
+      name: f.name,
+      type: f.type,
+      uom: f.uom,
+      vendor: f.vendor,
+      stock,
+      allocated,
+      available,
+      status: available < 0 ? 'reorder' : available === 0 ? 'short' : 'ok'
+    }
+  })
+
+  return {
+    summary: {
+      sellThroughPct,
+      totalSold,
+      totalOnHand,
+      gmroi,
+      inventoryTurn,
+      inventoryValue,
+      grossProfit,
+      avgProductionDays,
+      bestSellerCount: withDemand.length
+    },
+    sellThroughRows: codeRows.sort((a, b) => b.total - a.total),
+    bestSellers,
+    slowSellers,
+    fabricConsumption,
+    vendorPerformance,
+    stockAging: aging,
+    topOrders: orders
+      .slice()
+      .sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
+      .slice(0, 5)
+      .map((o) => ({
+        poNumber: o.poNumber,
+        retailer: rName(o.retailerId),
+        value: Number(o.value) || 0,
+        status: o.status,
+        deliveryDate: o.deliveryDate
+      }))
+  }
+}

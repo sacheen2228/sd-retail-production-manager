@@ -37,10 +37,37 @@ export default function Reports({ ctx }) {
   const [to, setTo] = useState('')
   const [groupBy, setGroupBy] = useState('style')
   const [challanPo, setChallanPo] = useState('')
+  const [wipSearch, setWipSearch] = useState('')
+  const [wipStage, setWipStage] = useState('All')
+  const [wipRetailer, setWipRetailer] = useState('All')
+  const [wipCategory, setWipCategory] = useState('All')
+  const [wipStuckDays, setWipStuckDays] = useState('')
+  const [poStatus, setPoStatus] = useState('All')
+  const [profitRetailer, setProfitRetailer] = useState('All')
+  const [profitCategory, setProfitCategory] = useState('All')
 
   const purchaseOrders = db.purchaseOrders || []
   const retailers = db.retailers || []
   const styles = db.styles || []
+
+  const wipRetailers = useMemo(() => [...new Set((wip || []).map((r) => r.retailer).filter(Boolean))].sort(), [wip])
+  const wipCategories = useMemo(() => [...new Set((wip || []).map((r) => r.category).filter(Boolean))].sort(), [wip])
+  const profitRetailers = useMemo(() => [...new Set(retailers.map((r) => r.name))].sort(), [retailers])
+  const profitCategories = useMemo(() => [...new Set(styles.map((s) => s.category).filter(Boolean))].sort(), [styles])
+
+  const filteredWip = useMemo(() => {
+    if (!wip) return []
+    const q = wipSearch.trim().toLowerCase()
+    const minDays = wipStuckDays === '' ? null : Number(wipStuckDays)
+    return wip.filter((r) => {
+      if (wipStage !== 'All' && r.stage !== wipStage) return false
+      if (wipRetailer !== 'All' && r.retailer !== wipRetailer) return false
+      if (wipCategory !== 'All' && r.category !== wipCategory) return false
+      if (minDays !== null && r.daysInStage < minDays) return false
+      if (q && !`${r.styleCode} ${r.styleName} ${r.poNumber}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [wip, wipSearch, wipStage, wipRetailer, wipCategory, wipStuckDays])
 
   useEffect(() => {
     api.get('/api/reports/wip').then(setWip).catch(() => {})
@@ -71,7 +98,10 @@ export default function Reports({ ctx }) {
     return `${range.from ? range.from.slice(8, 10) + ' ' + monthLabel(range.from.slice(0, 7)) : 'start'} → ${range.to ? range.to.slice(8, 10) + ' ' + monthLabel(range.to.slice(0, 7)) : 'today'}`
   }, [range])
 
-  const profit = useMemo(() => computeProfit(db, range), [db, range])
+  const profit = useMemo(
+    () => computeProfit(db, range, { retailer: profitRetailer === 'All' ? null : profitRetailer, category: profitCategory === 'All' ? null : profitCategory }),
+    [db, range, profitRetailer, profitCategory]
+  )
   const fabricReq = useMemo(() => computeFabricRequirement(db), [db])
 
   const posInRange = useMemo(
@@ -86,6 +116,11 @@ export default function Reports({ ctx }) {
     [purchaseOrders, range]
   )
 
+  const posInRangeFiltered = useMemo(
+    () => (poStatus === 'All' ? posInRange : posInRange.filter((o) => o.status === poStatus)),
+    [posInRange, poStatus]
+  )
+
   useEffect(() => {
     if (posInRange.length && !challanPo) setChallanPo(posInRange[0].id)
     if (!posInRange.length) setChallanPo('')
@@ -93,32 +128,32 @@ export default function Reports({ ctx }) {
 
   // ---- Production (WIP) ----------
   const byStage = useMemo(() => {
-    if (!wip) return []
+    if (!filteredWip) return []
     const m = {}
-    wip.forEach((r) => (m[r.stage] = (m[r.stage] || 0) + 1))
+    filteredWip.forEach((r) => (m[r.stage] = (m[r.stage] || 0) + 1))
     return STAGES.filter((s) => m[s]).map((s) => ({ stage: s, count: m[s] }))
-  }, [wip])
+  }, [filteredWip])
 
   const byRetailer = useMemo(() => {
-    if (!wip) return []
+    if (!filteredWip) return []
     const m = {}
-    wip.forEach((r) => (m[r.retailer] = (m[r.retailer] || 0) + r.quantity))
+    filteredWip.forEach((r) => (m[r.retailer] = (m[r.retailer] || 0) + r.quantity))
     return Object.entries(m)
       .map(([retailer, qty]) => ({ retailer, qty }))
       .sort((a, b) => b.qty - a.qty)
-  }, [wip])
+  }, [filteredWip])
 
-  const atRisk = useMemo(() => (wip || []).filter((r) => r.status !== 'Dispatched' && r.daysLeft !== null && r.daysLeft <= 7), [wip])
+  const atRisk = useMemo(() => (filteredWip || []).filter((r) => r.status !== 'Dispatched' && r.daysLeft !== null && r.daysLeft <= 7), [filteredWip])
 
   const wipExport = useMemo(() => {
-    if (!wip) return null
+    if (!filteredWip) return null
     const cols = ['Sr', 'PO', 'Buyer', 'Style', 'Color', 'Size', 'Order Qty', 'WIP', 'Stage', 'Days', 'Dispatch', 'Status']
-    const rows = wip.map((r, i) => {
+    const rows = filteredWip.map((r, i) => {
       const row = i + 2
       return [i + 1, r.poNumber, r.retailer, r.styleCode, r.color, r.size, r.quantity, `=G${row}-K${row}`, r.stage, r.daysInStage, r.qtyDispatched, `=IF(K${row}>0,"Dispatched","In Production")`]
     })
     return { cols, rows }
-  }, [wip])
+  }, [filteredWip])
 
   function exportCSV() {
     if (!wipExport) return
@@ -156,7 +191,7 @@ export default function Reports({ ctx }) {
 
   // ---- Documents ----------
   const poDocCols = ['PO', 'Retailer', 'Order Date', 'Delivery Date', 'Styles', 'Value', 'Status']
-  const poDocRows = posInRange.map((o) => [
+  const poDocRows = posInRangeFiltered.map((o) => [
     o.poNumber,
     rName(o.retailerId),
     o.orderDate || '-',
@@ -166,7 +201,7 @@ export default function Reports({ ctx }) {
     o.status
   ])
 
-  const challan = posInRange.find((o) => o.id === challanPo)
+  const challan = posInRangeFiltered.find((o) => o.id === challanPo)
   const challanLines = challan ? styles.filter((s) => s.poId === challan.id) : []
   const challanCols = ['Style', 'Name', 'Color', 'Size', 'Order Qty', 'Dispatched', 'Balance', 'Line Value']
   const challanDocRows = challanLines.map((s) => [
@@ -193,7 +228,7 @@ export default function Reports({ ctx }) {
   ])
 
   function poReportCSV() {
-    downloadCSV(`po-report-${new Date().toISOString().slice(0, 10)}.csv`, poDocCols, posInRange.map((o) => [
+    downloadCSV(`po-report-${new Date().toISOString().slice(0, 10)}.csv`, poDocCols, posInRangeFiltered.map((o) => [
       o.poNumber, rName(o.retailerId), o.orderDate || '', o.deliveryDate || '',
       styles.filter((s) => s.poId === o.id).length, Number(o.value) || 0, o.status
     ]))
@@ -247,6 +282,23 @@ export default function Reports({ ctx }) {
               </>
             }
           >
+            <div className="report-filters">
+              <Input className="search" placeholder="Search style / PO…" value={wipSearch} onChange={(e) => setWipSearch(e.target.value)} />
+              <Select value={wipStage} onChange={(e) => setWipStage(e.target.value)} className="input-sm" style={{ maxWidth: 190 }}>
+                <option value="All">All stages</option>
+                {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
+              <Select value={wipRetailer} onChange={(e) => setWipRetailer(e.target.value)} className="input-sm" style={{ maxWidth: 190 }}>
+                <option value="All">All retailers</option>
+                {wipRetailers.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
+              <Select value={wipCategory} onChange={(e) => setWipCategory(e.target.value)} className="input-sm" style={{ maxWidth: 190 }}>
+                <option value="All">All categories</option>
+                {wipCategories.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
+              <Input className="input-sm range-input" type="number" min="0" placeholder="Stuck ≥ days" value={wipStuckDays} onChange={(e) => setWipStuckDays(e.target.value)} />
+              <Btn tone="ghost" onClick={() => { setWipSearch(''); setWipStage('All'); setWipRetailer('All'); setWipCategory('All'); setWipStuckDays('') }}>Clear</Btn>
+            </div>
             {!wip ? (
               <Empty>Loading…</Empty>
             ) : (
@@ -258,28 +310,32 @@ export default function Reports({ ctx }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {wip.map((r, i) => (
-                    <tr key={i}>
-                      <td className="muted">{i + 1}</td>
-                      <td>{r.poNumber}</td>
-                      <td>{r.retailer}</td>
-                      <td className="strong">
-                        {r.styleCode}
-                        <div className="cell-sub">{r.styleName}</div>
-                      </td>
-                      <td>{r.color || '-'}</td>
-                      <td>{r.size || '-'}</td>
-                      <td className="strong">{r.quantity}</td>
-                      <td>{r.wip}</td>
-                      <td><StageBadge stage={r.stage} /></td>
-                      <td>{r.daysInStage}d</td>
-                      <td>{r.qtyDispatched > 0 ? r.qtyDispatched : '-'}</td>
-                      <td>
-                        {r.status === 'Dispatched' ? <StageBadge stage="Dispatched" /> : <span className="muted">In Production</span>}
-                        {r.daysLeft !== null && r.status !== 'Dispatched' && r.daysLeft <= 7 && <div className="cell-sub danger-text">Due in {r.daysLeft}d</div>}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredWip.length === 0 ? (
+                    <tr><td colSpan="12"><div className="muted" style={{ padding: 12 }}>No styles match the current filters.</div></td></tr>
+                  ) : (
+                    filteredWip.map((r, i) => (
+                      <tr key={i}>
+                        <td className="muted">{i + 1}</td>
+                        <td>{r.poNumber}</td>
+                        <td>{r.retailer}</td>
+                        <td className="strong">
+                          {r.styleCode}
+                          <div className="cell-sub">{r.styleName}</div>
+                        </td>
+                        <td>{r.color || '-'}</td>
+                        <td>{r.size || '-'}</td>
+                        <td className="strong">{r.quantity}</td>
+                        <td>{r.wip}</td>
+                        <td><StageBadge stage={r.stage} /></td>
+                        <td>{r.daysInStage}d</td>
+                        <td>{r.qtyDispatched > 0 ? r.qtyDispatched : '-'}</td>
+                        <td>
+                          {r.status === 'Dispatched' ? <StageBadge stage="Dispatched" /> : <span className="muted">In Production</span>}
+                          {r.daysLeft !== null && r.status !== 'Dispatched' && r.daysLeft <= 7 && <div className="cell-sub danger-text">Due in {r.daysLeft}d</div>}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             )}
@@ -351,6 +407,17 @@ export default function Reports({ ctx }) {
             </>
           }
         >
+          <div className="report-filters">
+            <Select value={profitRetailer} onChange={(e) => setProfitRetailer(e.target.value)} className="input-sm" style={{ maxWidth: 190 }}>
+              <option value="All">All retailers</option>
+              {profitRetailers.map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+            <Select value={profitCategory} onChange={(e) => setProfitCategory(e.target.value)} className="input-sm" style={{ maxWidth: 190 }}>
+              <option value="All">All categories</option>
+              {profitCategories.map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+            <Btn tone="ghost" onClick={() => { setProfitRetailer('All'); setProfitCategory('All') }}>Clear</Btn>
+          </div>
           {profitGroup.length === 0 ? (
             <Empty>No orders in this period. Add a Unit Cost on order styles to see profit.</Empty>
           ) : (
@@ -391,18 +458,22 @@ export default function Reports({ ctx }) {
             title={`Purchase Order Report — ${rangeLabel}`}
             action={
               <>
+                <Select value={poStatus} onChange={(e) => setPoStatus(e.target.value)} className="input-sm" style={{ maxWidth: 180, marginRight: 8 }}>
+                  <option value="All">All statuses</option>
+                  {['Confirmed', 'In Production', 'On Hold', 'Dispatched'].map((s) => <option key={s} value={s}>{s}</option>)}
+                </Select>
                 <Btn tone="ghost" onClick={poReportCSV}>Export CSV</Btn>
-                <Btn tone="ghost" onClick={() => printDoc({ title: 'Purchase Order Report', subtitle: `${rangeLabel} · ${posInRange.length} orders`, columns: poDocCols, rows: poDocRows })}>Print / PDF</Btn>
+                <Btn tone="ghost" onClick={() => printDoc({ title: 'Purchase Order Report', subtitle: `${rangeLabel} · ${posInRangeFiltered.length} orders`, columns: poDocCols, rows: poDocRows })}>Print / PDF</Btn>
               </>
             }
           >
-            {posInRange.length === 0 ? (
+            {posInRangeFiltered.length === 0 ? (
               <Empty>No POs in this period.</Empty>
             ) : (
               <table className="table">
                 <thead><tr>{poDocCols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
                 <tbody>
-                  {posInRange.map((o) => (
+                  {posInRangeFiltered.map((o) => (
                     <tr key={o.id}>
                       <td className="strong">{o.poNumber}</td>
                       <td>{rName(o.retailerId)}</td>
@@ -451,7 +522,7 @@ export default function Reports({ ctx }) {
             <>
               <Field label="Order">
                 <Select value={challanPo} onChange={(e) => setChallanPo(e.target.value)}>
-                  {posInRange.map((o) => <option key={o.id} value={o.id}>{o.poNumber} — {rName(o.retailerId)}</option>)}
+                  {posInRangeFiltered.map((o) => <option key={o.id} value={o.id}>{o.poNumber} — {rName(o.retailerId)}</option>)}
                 </Select>
               </Field>
               <Btn tone="ghost" disabled={!challan} onClick={() => printDoc({ title: `Delivery Challan — ${challan ? challan.poNumber : ''}`, subtitle: `${challan ? rName(challan.retailerId) + ' · due ' + (challan.deliveryDate ? challan.deliveryDate : '-') : ''}`, columns: challanCols, rows: challanDocRows })}>Print / PDF</Btn>
