@@ -55,7 +55,7 @@ export default function Settings({ ctx }) {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `sd-retail-backup-${new Date().toISOString().slice(0, 10)}.json`
+        a.download = `rk-atelier-backup-${new Date().toISOString().slice(0, 10)}.json`
         a.click()
         URL.revokeObjectURL(a.href)
         push('Backup downloaded', 'success')
@@ -288,7 +288,7 @@ export default function Settings({ ctx }) {
         </Card>
       )}
 
-      {tab === 'account' && authEnabled && (
+{tab === 'account' && authEnabled && (
         <div className="grid-2">
           <Card title="Change Password">
             <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
