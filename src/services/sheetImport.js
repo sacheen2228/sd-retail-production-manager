@@ -249,13 +249,19 @@ export async function applyImport(plans) {
           created++
         } else {
           const id = body.id
+          const idLabel = id === undefined || id === null ? '(no-id)' : String(id).slice(0, 8)
           delete body.id
           await api.put(`/api/${collection}/${id}`, body)
           updated++
         }
       } catch (err) {
         failed++
-        if (errors.length < 10) errors.push({ tab, key: String(body.poNumber || body.styleCode || body.name || body.id || '?'), message: err.message })
+        if (errors.length < 10) {
+          const mode = rec.__create ? 'NEW' : 'UP'
+          const idRaw = rec.id
+          const idLabel = idRaw === undefined ? 'UNDEF' : idRaw === null ? 'NULL' : idRaw === '' ? 'EMPTY' : String(idRaw).slice(0, 8)
+          errors.push({ tab, key: `${mode} ${String(body.poNumber || body.styleCode || body.name || '?')} [id=${idLabel}]`, message: err.message })
+        }
       }
     }
     counts[tab] = { added: created, updated, skipped: plan.skipped, failed, error: plan.error }
