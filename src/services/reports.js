@@ -196,4 +196,113 @@ export function computeFabricStock(db) {
   return { summary, rows }
 }
 
+function inRange(dateStr, from, to) {
+  if (!dateStr) return false
+  const d = new Date(dateStr + 'T00:00:00')
+  if (Number.isNaN(d.getTime())) return false
+  if (from && d < new Date(from + 'T00:00:00')) return false
+  if (to && d > new Date(to + 'T00:00:00')) return false
+  return true
+}
+
+function monthKey(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Cost vs. selling profit, joined through each style's PO for order date/retailer.
+ * `range` = { from?: 'YYYY-MM-DD', to?: 'YYYY-MM-DD' } filtering by PO order date.
+ */
+export function computeProfit(db, range = {}) {
+  const { from, to } = range || {}
+  const rows = []
+  ;(db.styles || []).forEach((s) => {
+    const po = (db.purchaseOrders || []).find((o) => o.id === s.poId)
+    if (!po) return
+    if (!inRange(po.orderDate, from, to)) return
+    const qty = Number(s.quantity) || 0
+    const sell = qty * (Number(s.price) || 0)
+    const cost = qty * (Number(s.costPrice) || 0)
+    rows.push({
+      styleCode: s.styleCode,
+      styleName: s.styleName,
+      poId: po.id,
+      poNumber: po.poNumber,
+      retailer: ((db.retailers || []).find((r) => r.id === po.retailerId) || {}).name || '-',
+      orderDate: po.orderDate,
+      month: monthKey(po.orderDate),
+      qty,
+      sell,
+      cost,
+      profit: sell - cost,
+      margin: sell > 0 ? ((sell - cost) / sell) * 100 : 0
+    })
+  })
+
+  const group = (keyFn, labelFn) => {
+    const m = {}
+    rows.forEach((r) => {
+      const k = keyFn(r)
+      if (k === null || k === undefined) return
+      const g = (m[k] = m[k] || { label: labelFn(r), qty: 0, sell: 0, cost: 0, profit: 0 })
+      g.qty += r.qty
+      g.sell += r.sell
+      g.cost += r.cost
+      g.profit += r.profit
+    })
+    return Object.values(m)
+      .map((g) => ({ ...g, margin: g.sell > 0 ? (g.profit / g.sell) * 100 : 0 }))
+      .sort((a, b) => b.profit - a.profit)
+  }
+
+  const totals = rows.reduce(
+    (a, r) => ({ qty: a.qty + r.qty, sell: a.sell + r.sell, cost: a.cost + r.cost, profit: a.profit + r.profit }),
+    { qty: 0, sell: 0, cost: 0, profit: 0 }
+  )
+  totals.margin = totals.sell > 0 ? (totals.profit / totals.sell) * 100 : 0
+
+  return {
+    byStyle: group((r) => r.styleCode, (r) => `${r.styleCode} — ${r.styleName}`),
+    byOrder: group((r) => r.poId, (r) => `${r.poNumber} (${r.retailer})`),
+    byMonth: group((r) => r.month, (r) => r.month),
+    totals
+  }
+}
+
+/** Fabric requirement for open (non-dispatched) styles: required vs. stock. */
+export function computeFabricRequirement(db) {
+  const open = db.styles.filter((s) => s.stage !== 'Dispatched')
+  const req = {}
+  const add = (name, qty) => {
+    if (!name) return
+    const k = String(name).trim().toLowerCase()
+    req[k] = (req[k] || 0) + (Number(qty) || 0)
+  }
+  open.forEach((s) => {
+    const qty = Number(s.quantity) || 0
+    const cons = Number(s.consumption) || 0
+    add(s.fabric, qty * cons)
+    add(s.trim, qty * cons)
+  })
+  return (db.fabrics || []).map((f) => {
+    const k = String(f.name || '').trim().toLowerCase()
+    const required = Math.round(req[k] || 0)
+    const stock = Number(f.stock) || 0
+    const available = stock - required
+    return {
+      name: f.name,
+      type: f.type,
+      uom: f.uom,
+      vendor: f.vendor,
+      leadTimeDays: f.leadTimeDays,
+      stock,
+      required,
+      available,
+      status: available < 0 ? 'reorder' : available === 0 ? 'short' : 'ok'
+    }
+  })
+}
+
 export { STAGES }

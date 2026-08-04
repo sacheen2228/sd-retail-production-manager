@@ -51,7 +51,7 @@ const COLLECTIONS = {
     map: {
       poId: 'po_id', styleCode: 'style_code', styleName: 'style_name', category: 'category',
       subCategory: 'sub_category', color: 'color', size: 'size',
-      quantity: 'quantity', price: 'price', fabric: 'fabric',
+      quantity: 'quantity', price: 'price', costPrice: 'cost_price', fabric: 'fabric',
       trim: 'trim', stage: 'stage', stageEnteredAt: 'stage_entered_at', qtyDispatched: 'qty_dispatched',
       image: 'image', notes: 'notes', history: 'history'
     }

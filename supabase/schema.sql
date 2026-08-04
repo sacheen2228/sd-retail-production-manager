@@ -111,6 +111,7 @@ create table if not exists styles (
   size             text not null default '',
   quantity         numeric not null default 0 check (quantity >= 0),
   price            numeric not null default 0 check (price >= 0),
+  cost_price       numeric not null default 0 check (cost_price >= 0),
   fabric           text not null default '',
   trim             text not null default '',
   stage            production_stage not null default 'Sampling',
@@ -121,6 +122,7 @@ create table if not exists styles (
   history          jsonb not null default '[]'::jsonb,
   created_at       timestamptz not null default now()
 );
+alter table styles add column if not exists cost_price numeric not null default 0 check (cost_price >= 0);
 
 -- Upgrades for existing projects: adds the variant columns if missing.
 alter table styles add column if not exists color text not null default '';

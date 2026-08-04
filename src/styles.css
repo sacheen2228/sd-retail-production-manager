@@ -838,6 +838,22 @@ body {
   color: #fff;
 }
 
+.toolbar-tabs {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+td.pos { color: var(--success); font-weight: 700; }
+td.neg { color: var(--danger); font-weight: 700; }
+
+.totals-row th {
+  border-top: 2px solid var(--border);
+  background: var(--paper);
+  font-weight: 800;
+}
+
 .search {
   width: 240px;
 }

@@ -34,6 +34,7 @@ const emptyLine = () => ({
   size: '',
   quantity: '',
   price: '',
+  costPrice: '',
   fabric: '',
   trim: '',
   stage: 'Sampling',
@@ -87,6 +88,7 @@ export default function Orders({ ctx }) {
           size: s.size || '',
           quantity: s.quantity,
           price: s.price,
+          costPrice: s.costPrice || '',
           fabric: s.fabric || '',
           trim: s.trim || '',
           stage: s.stage,
@@ -157,6 +159,7 @@ export default function Orders({ ctx }) {
         size: l.size,
         quantity: Number(l.quantity) || 0,
         price: Number(l.price) || 0,
+        costPrice: Number(l.costPrice) || 0,
         fabric: l.fabric,
         trim: l.trim,
         stage: l.stage,
@@ -422,6 +425,9 @@ export default function Orders({ ctx }) {
                   </Field>
                   <Field label="Unit Price (₹)">
                     <Input type="number" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} placeholder="95000" />
+                  </Field>
+                  <Field label="Unit Cost (₹)" hint="for profit reports">
+                    <Input type="number" min="0" value={l.costPrice} onChange={(e) => setLine(i, { costPrice: e.target.value })} placeholder="60000" />
                   </Field>
                   <Field label="Starting Stage">
                     <Select value={l.stage} onChange={(e) => setLine(i, { stage: e.target.value })}>
