@@ -37,6 +37,7 @@ export default function Settings({ ctx }) {
   const [pwBusy, setPwBusy] = useState(false)
   const [sheetTabs, setSheetTabs] = useState(null)
   const [sheetPlans, setSheetPlans] = useState(null)
+  const [sheetErrors, setSheetErrors] = useState(null)
   const [sheetBusy, setSheetBusy] = useState(false)
   const [applyBusy, setApplyBusy] = useState(false)
   const restoreRef = useRef(null)
@@ -139,6 +140,7 @@ export default function Settings({ ctx }) {
   async function readSheets() {
     setSheetBusy(true)
     setSheetPlans(null)
+    setSheetErrors(null)
     try {
       const { tabs } = await readSheetData()
       setSheetTabs(tabs)
@@ -168,12 +170,9 @@ export default function Settings({ ctx }) {
         const res = await applyImport(sheetPlans)
         const total = Object.values(res.counts).reduce((a, c) => a + c.added + c.updated, 0)
         const failed = Object.values(res.counts).reduce((a, c) => a + (c.failed || 0), 0)
+        setSheetErrors(res.errors && res.errors.length ? res.errors : null)
         if (failed) {
-          const first = res.errors[0]
-          push(
-            `${failed} row(s) skipped (${total} applied). ${first ? first.tab + ': ' + first.key + ' — ' + first.message : ''}`,
-            'danger'
-          )
+          push(`${failed} row(s) skipped (${total} applied) — see details below`, 'danger')
         } else {
           push(`Imported ${total} records from Google Sheets`, 'success')
         }
@@ -454,6 +453,19 @@ export default function Settings({ ctx }) {
                 </Btn>
               </div>
             </>
+          )}
+
+          {sheetErrors && (
+            <div className="field-error" style={{ whiteSpace: 'pre-wrap', fontSize: 12.5 }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                {sheetErrors.length} row(s) not imported:
+              </div>
+              {sheetErrors.map((er, i) => (
+                <div key={i} style={{ marginBottom: 4 }}>
+                  • {er.tab} — {er.key}: {er.message}
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       )}
