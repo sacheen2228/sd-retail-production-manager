@@ -27,6 +27,16 @@ const COLLECTION = {
   'Ready Stock': 'readyStock'
 }
 
+const STAGES = new Set([
+  'Sampling', 'Fabric', 'Trims', 'Embroidery-Kolkata', 'Embroidery-Mumbai',
+  'Cutting', 'Stitching', 'Finishing', 'QC', 'Packing', 'Dispatched'
+])
+
+const PO_STATUSES = new Set(['Confirmed', 'In Production', 'On Hold', 'Dispatched'])
+
+// Columns the DB rejects below zero (schema `check (... >= 0)`).
+const NON_NEGATIVE = ['stock', 'receivedStock', 'quantity', 'costPrice', 'lowStockLevel', 'consumption', 'leadTimeDays', 'value', 'qtyDispatched']
+
 function clean(v) {
   if (v === null || v === undefined) return ''
   return String(v).trim()
@@ -140,6 +150,18 @@ function stripUndef(obj) {
   return out
 }
 
+/** Drop invalid values the DB schema would reject (bad enums, negatives). */
+function sanitize(rec) {
+  const out = {}
+  for (const [k, v] of Object.entries(rec)) {
+    if (NON_NEGATIVE.includes(k) && typeof v === 'number' && v < 0) continue
+    if (k === 'stage' && v && !STAGES.has(v)) continue
+    if (k === 'status' && v && !PO_STATUSES.has(v)) continue
+    out[k] = v
+  }
+  return out
+}
+
 /** Read every exported tab from the Google Sheet. */
 export async function readSheetData() {
   const tabs = []
@@ -189,11 +211,12 @@ export function diffSheetData(db, tabs) {
       }
       const key = reader.key(rec)
       const match = existing[tab].get(key)
+      rec = sanitize(rec)
       if (match) {
-        plan.records.push({ ...match, ...stripUndef(rec) })
+        plan.records.push({ ...match, ...rec })
         plan.updated++
       } else {
-        plan.records.push({ ...stripUndef(rec), __create: true })
+        plan.records.push({ ...rec, __create: true })
         plan.added++
       }
     }
@@ -210,27 +233,34 @@ function hasChanges(plans) {
 export async function applyImport(plans) {
   if (!plans || !hasChanges(plans)) throw new Error('Nothing to apply')
   const counts = {}
+  const errors = []
   for (const tab of TAB_ORDER) {
     const plan = plans[tab]
     const collection = COLLECTION[tab]
     let created = 0
     let updated = 0
+    let failed = 0
     for (const rec of plan.records) {
       const body = stripUndef(rec)
-      if (rec.__create) {
-        delete body.__create
-        await api.post(`/api/${collection}`, body)
-        created++
-      } else {
-        const id = body.id
-        delete body.id
-        await api.put(`/api/${collection}/${id}`, body)
-        updated++
+      try {
+        if (rec.__create) {
+          delete body.__create
+          await api.post(`/api/${collection}`, body)
+          created++
+        } else {
+          const id = body.id
+          delete body.id
+          await api.put(`/api/${collection}/${id}`, body)
+          updated++
+        }
+      } catch (err) {
+        failed++
+        if (errors.length < 10) errors.push({ tab, key: String(body.poNumber || body.styleCode || body.name || body.id || '?'), message: err.message })
       }
     }
-    counts[tab] = { added: created, updated, skipped: plan.skipped, error: plan.error }
+    counts[tab] = { added: created, updated, skipped: plan.skipped, failed, error: plan.error }
   }
-  return { ok: true, counts }
+  return { ok: true, counts, errors }
 }
 
 export function totalChanges(plans) {

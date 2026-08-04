@@ -167,7 +167,16 @@ export default function Settings({ ctx }) {
       try {
         const res = await applyImport(sheetPlans)
         const total = Object.values(res.counts).reduce((a, c) => a + c.added + c.updated, 0)
-        push(`Imported ${total} records from Google Sheets`, 'success')
+        const failed = Object.values(res.counts).reduce((a, c) => a + (c.failed || 0), 0)
+        if (failed) {
+          const first = res.errors[0]
+          push(
+            `${failed} row(s) skipped (${total} applied). ${first ? first.tab + ': ' + first.key + ' — ' + first.message : ''}`,
+            'danger'
+          )
+        } else {
+          push(`Imported ${total} records from Google Sheets`, 'success')
+        }
         await refresh()
         setSheetPlans(null)
       } catch (e) {
