@@ -112,13 +112,13 @@ const COL = Object.fromEntries(Object.entries(COLLECTIONS).map(([k, v]) => [k, v
 
 async function sbList(collection) {
   const { data, error } = await supabaseClient.supabase.from(COL[collection]).select('*')
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return (data || []).map((r) => fromDB(collection, r))
 }
 
 async function sbGet(collection, id) {
   const { data, error } = await supabaseClient.supabase.from(COL[collection]).select('*').eq('id', id).maybeSingle()
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return fromDB(collection, data)
 }
 
@@ -130,7 +130,7 @@ async function sbCreate(collection, app) {
     body.history = [{ at: todayStr(), from: null, to: stage, note: 'Order created' }]
   }
   const { data, error } = await supabaseClient.supabase.from(COL[collection]).insert(body).select().single()
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return fromDB(collection, data)
 }
 
@@ -156,13 +156,13 @@ async function sbUpdate(collection, id, app) {
     }
   }
   const { data, error } = await supabaseClient.supabase.from(COL[collection]).update(body).eq('id', id).select().single()
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return fromDB(collection, data)
 }
 
 async function sbRemove(collection, id) {
   const { error } = await supabaseClient.supabase.from(COL[collection]).delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return { ok: true }
 }
 
@@ -186,7 +186,7 @@ async function sbAudit(limit = 500) {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(limit)
-  if (error) throw new Error(error.message)
+  if (error) throw error
   return (data || []).map((r) => ({
     id: r.id,
     userId: r.user_id,
