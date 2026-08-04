@@ -183,13 +183,13 @@ declare
   detail jsonb;
 begin
   if tg_op = 'DELETE' then
-    new_id := coalesce(old.id, '')::text;
+    new_id := coalesce(old.id::text, '');
     detail := jsonb_build_object('before', to_jsonb(old));
   elsif tg_op = 'UPDATE' then
-    new_id := coalesce(new.id, '')::text;
+    new_id := coalesce(new.id::text, '');
     detail := jsonb_build_object('before', to_jsonb(old), 'after', to_jsonb(new));
   else
-    new_id := coalesce(new.id, '')::text;
+    new_id := coalesce(new.id::text, '');
     detail := jsonb_build_object('after', to_jsonb(new));
   end if;
   insert into public.audit_log (user_id, action, entity, entity_id, detail)
