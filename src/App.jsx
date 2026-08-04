@@ -184,16 +184,25 @@ function Shell() {
 
 function Root() {
   const [session, setSession] = useState(authEnabled ? undefined : 'none')
+  const [recovery, setRecovery] = useState(false)
+  const [sessionLoaded, setSessionLoaded] = useState(!authEnabled)
 
   useEffect(() => {
     if (!authEnabled) return
-    getSession().then((s) => setSession(s))
-    const unsub = onAuthChange((_event, s) => setSession(s))
+    getSession().then((s) => {
+      setSession(s)
+      setSessionLoaded(true)
+    })
+    const unsub = onAuthChange((event, s) => {
+      setSession(s)
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') setRecovery(false)
+    })
     return unsub
   }, [])
 
-  if (authEnabled && session === undefined) return <div className="boot">Loading…</div>
-  if (authEnabled && !session) return <AuthScreen />
+  if (authEnabled && !sessionLoaded) return <div className="boot">Loading…</div>
+  if (authEnabled && (recovery || !session)) return <AuthScreen recovery={recovery} />
   return <Shell />
 }
 

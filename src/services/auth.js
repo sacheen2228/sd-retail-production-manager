@@ -34,6 +34,22 @@ export async function signOut() {
   await supabaseClient.supabase.auth.signOut()
 }
 
+export async function resetPassword(email) {
+  if (!supabaseClient.supabase) throw new Error('Authentication is not configured')
+  const { error } = await supabaseClient.supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin
+  })
+  if (error) throw new Error(error.message)
+  return true
+}
+
+export async function updatePassword(newPassword) {
+  if (!supabaseClient.supabase) throw new Error('Authentication is not configured')
+  const { error } = await supabaseClient.supabase.auth.updateUser({ password: newPassword })
+  if (error) throw new Error(error.message)
+  return true
+}
+
 export async function getUserRole() {
   if (!authEnabled) return 'admin'
   const user = await getCurrentUser()

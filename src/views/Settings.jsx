@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
-import { getCurrentUser } from '../services/auth.js'
+import { authEnabled, getCurrentUser, updatePassword } from '../services/auth.js'
 import { Card, Btn, Badge, Select, Empty } from '../components/ui.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
@@ -32,6 +32,8 @@ export default function Settings({ ctx }) {
   const [profiles, setProfiles] = useState([])
   const [entityFilter, setEntityFilter] = useState('All')
   const [busy, setBusy] = useState(false)
+  const [pwState, setPwState] = useState({ pw: '', confirm: '' })
+  const [pwBusy, setPwBusy] = useState(false)
   const restoreRef = useRef(null)
 
   useEffect(() => {
@@ -113,11 +115,28 @@ export default function Settings({ ctx }) {
     }
   }
 
+  async function changePassword(e) {
+    e.preventDefault()
+    if (pwState.pw.length < 6) return push('Password must be at least 6 characters', 'danger')
+    if (pwState.pw !== pwState.confirm) return push('Passwords do not match', 'danger')
+    setPwBusy(true)
+    try {
+      await updatePassword(pwState.pw)
+      setPwState({ pw: '', confirm: '' })
+      push('Password updated successfully', 'success')
+    } catch (err) {
+      push('Password update failed: ' + err.message, 'danger')
+    } finally {
+      setPwBusy(false)
+    }
+  }
+
   const tabs = [
     { id: 'backup', label: 'Backup & Restore' },
     { id: 'audit', label: 'Audit Log' }
   ]
   if (can('manage')) tabs.push({ id: 'roles', label: 'Roles & Permissions' })
+  if (authEnabled) tabs.push({ id: 'account', label: 'My Account' })
 
   const entityOptions = ['All', 'retailers', 'vendors', 'fabrics', 'readyStock', 'purchaseOrders', 'styles']
   const shownAudit = entityFilter === 'All' ? audit : audit.filter((a) => a.entity === entityFilter)
@@ -267,6 +286,43 @@ export default function Settings({ ctx }) {
             </table>
           )}
         </Card>
+      )}
+
+      {tab === 'account' && authEnabled && (
+        <div className="grid-2">
+          <Card title="Change Password">
+            <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+              Update the password for your SD Retail account. You'll stay signed in on this device.
+            </p>
+            <form className="form-stack" onSubmit={changePassword}>
+              <label className="field">
+                <span className="field-label">New password</span>
+                <input
+                  className="input"
+                  type="password"
+                  autoComplete="new-password"
+                  value={pwState.pw}
+                  onChange={(e) => setPwState((s) => ({ ...s, pw: e.target.value }))}
+                  placeholder="At least 6 characters"
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Confirm password</span>
+                <input
+                  className="input"
+                  type="password"
+                  autoComplete="new-password"
+                  value={pwState.confirm}
+                  onChange={(e) => setPwState((s) => ({ ...s, confirm: e.target.value }))}
+                  placeholder="Repeat your password"
+                />
+              </label>
+              <Btn type="submit" disabled={pwBusy}>
+                {pwBusy ? 'Updating…' : 'Update password'}
+              </Btn>
+            </form>
+          </Card>
+        </div>
       )}
 
       {confirmNode}
