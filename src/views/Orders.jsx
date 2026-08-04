@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { api } from '../api.js'
 import { useToast } from '../context/ToastContext.jsx'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
+import ImageUpload from '../components/ImageUpload.jsx'
 import { validatePurchaseOrder, firstError } from '../lib/validate.js'
 import {
   Card,
@@ -39,7 +40,7 @@ const emptyLine = () => ({
   notes: ''
 })
 
-const EMPTY_PO = { poNumber: '', retailerId: '', orderDate: '', deliveryDate: '', status: 'Confirmed', value: 0, notes: '' }
+const EMPTY_PO = { poNumber: '', retailerId: '', orderDate: '', deliveryDate: '', status: 'Confirmed', value: 0, notes: '', image: '' }
 
 export default function Orders({ ctx }) {
   const { db, refresh, can } = ctx
@@ -138,7 +139,8 @@ export default function Orders({ ctx }) {
       deliveryDate: editing.deliveryDate,
       status: editing.status,
       value: orderValue,
-      notes: editing.notes
+      notes: editing.notes,
+      image: editing.image || ''
     }
     const po = editing.id
       ? await api.put('/api/purchaseOrders/' + editing.id, poBody)
@@ -220,7 +222,12 @@ export default function Orders({ ctx }) {
                 return (
                   <React.Fragment key={o.id}>
                     <tr onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="row-click">
-                      <td className="strong">{o.poNumber}</td>
+                      <td className="strong">
+                        <div className="style-cell">
+                          {o.image && <img className="style-thumb" src={o.image} alt="" />}
+                          {o.poNumber}
+                        </div>
+                      </td>
                       <td>{rName(o.retailerId)}</td>
                       <td>{fmtDate(o.orderDate)}</td>
                       <td>{fmtDate(o.deliveryDate)}</td>
@@ -240,6 +247,9 @@ export default function Orders({ ctx }) {
                         <td colSpan="8">
                           <div className="expanded-inner">
                             <div className="expanded-meta">
+                              {o.image && (
+                                <img className="po-image" src={o.image} alt={`PO ${o.poNumber}`} />
+                              )}
                               {o.notes ? <div className="muted">Notes: {o.notes}</div> : null}
                             </div>
                             <table className="table table-sm">
@@ -324,6 +334,11 @@ export default function Orders({ ctx }) {
                   ))}
                 </Select>
               </Field>
+            </div>
+
+            <div className="field" style={{ marginTop: 14 }}>
+              <span className="field-label">Product Image</span>
+              <ImageUpload value={editing.image} alt={editing.poNumber || 'product'} onChange={(url) => setEditing({ ...editing, image: url })} />
             </div>
 
             <div className="field" style={{ marginTop: 14 }}>

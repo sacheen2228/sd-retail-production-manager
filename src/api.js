@@ -42,7 +42,8 @@ const COLLECTIONS = {
     table: 'purchase_orders',
     map: {
       poNumber: 'po_number', retailerId: 'retailer_id', orderDate: 'order_date',
-      deliveryDate: 'delivery_date', status: 'status', value: 'value', notes: 'notes'
+      deliveryDate: 'delivery_date', status: 'status', value: 'value', notes: 'notes',
+      image: 'image'
     }
   },
   styles: {

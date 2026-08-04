@@ -1353,6 +1353,16 @@ select.input {
   flex-shrink: 0;
 }
 
+.po-image {
+  max-width: 180px;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e6ddd2);
+  margin-bottom: 10px;
+  display: block;
+}
+
 .image-upload-preview img {
   max-width: 220px;
   max-height: 220px;

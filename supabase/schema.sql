@@ -95,8 +95,10 @@ create table if not exists purchase_orders (
   status        po_status not null default 'Confirmed',
   value         numeric not null default 0 check (value >= 0),
   notes         text not null default '',
+  image         text not null default '',
   created_at    timestamptz not null default now()
 );
+alter table purchase_orders add column if not exists image text not null default '';
 
 create table if not exists styles (
   id               uuid primary key default uuid_generate_v4(),
