@@ -11,6 +11,19 @@ Data flows **both ways**: **app → sheet** (export, replaces each tab) and **sh
 3. Replace the editor content with the script below, then click **Save** (💾) and give the project a name (e.g. `Atelier Exports`).
 
 ```js
+// Works as a standalone script: uses the spreadsheet bound to the script, or
+// SPREADSHEET_ID / SS_ID from Script Properties, or auto-creates "Atelier Data".
+function getSpreadsheet() {
+  const props = PropertiesService.getScriptProperties()
+  const id = props.getProperty('SPREADSHEET_ID') || props.getProperty('SS_ID')
+  if (id) {
+    try { return SpreadsheetApp.openById(id) } catch (e) { /* fall through */ }
+  }
+  const ss = SpreadsheetApp.create('Atelier Data')
+  props.setProperty('SPREADSHEET_ID', ss.getId())
+  return ss
+}
+
 function doPost(e) {
   try {
     const req = JSON.parse(e.postData.contents)
@@ -20,7 +33,7 @@ function doPost(e) {
         return respond({ ok: false, error: 'Invalid token' })
       }
     }
-    const ss = SpreadsheetApp.getActiveSpreadsheet()
+    const ss = getSpreadsheet()
 
     // READ — used by the app's Sheet Sync import. Returns a tab's rows.
     if (req.action === 'read') {
@@ -83,6 +96,8 @@ function respond(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON)
 }
 ```
+
+> **Standalone script?** If you created the script at script.google.com (not from inside the sheet), add a **Script property** `SPREADSHEET_ID` (Project Settings → Script properties) with the ID from your spreadsheet URL — the string between `/d/` and `/edit`. The script prefers that ID, then `SS_ID`, then auto-creates an "Atelier Data" spreadsheet.
 
 4. Click **Deploy → New deployment**.
 5. For **Type** pick **Web app**:
