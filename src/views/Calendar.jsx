@@ -19,11 +19,12 @@ function monthMatrix(year, month) {
 }
 
 export default function Calendar({ ctx }) {
-  const { db } = ctx
+  const { db, navigate } = ctx
   const { purchaseOrders, styles, retailers } = db
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
+  const [selected, setSelected] = useState(null)
 
   const rName = (id) => retailers.find((r) => r.id === id)?.name || '-'
 
@@ -71,11 +72,13 @@ export default function Calendar({ ctx }) {
     }
     setMonth(m)
     setYear(y)
+    setSelected(null)
   }
 
   function goToday() {
     setYear(now.getFullYear())
     setMonth(now.getMonth())
+    setSelected(null)
   }
 
   const rows = monthMatrix(year, month)
@@ -91,6 +94,35 @@ export default function Calendar({ ctx }) {
     .filter((k) => events[k].some((e) => e.kind === 'delivery'))
     .sort()
     .map((k) => ({ date: k, deliveries: events[k].filter((e) => e.kind === 'delivery') }))
+
+  const selectedEvents = selected ? events[selected] || [] : []
+  const selectedDeliveries = selectedEvents.filter((e) => e.kind === 'delivery')
+  const selectedValue = selectedDeliveries.filter((e) => !e.done).reduce((a, e) => a + (Number(e.value) || 0), 0)
+
+  function openEvent(e) {
+    navigate(e.kind === 'sample' ? 'tracker' : 'deliveries')
+  }
+
+  function renderEvent(e, j, clickable) {
+    let tone = 'ok'
+    if (e.kind === 'sample') tone = 'sample'
+    else if (e.done) tone = 'dispatched'
+    else {
+      const dl = daysFromToday(e.date)
+      if (dl < 0) tone = 'danger'
+      else if (dl <= 7) tone = 'warn'
+    }
+    return (
+      <div
+        key={j}
+        className={`cal-ev ev-${tone}${clickable ? ' cal-ev-click' : ''}`}
+        onClick={clickable ? (ev) => { ev.stopPropagation(); openEvent(e) } : undefined}
+      >
+        <span className="cal-ev-label">{e.kind === 'sample' ? '✂' : '◈'} {e.label}</span>
+        <span className="cal-ev-sub">{e.sub}</span>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -133,26 +165,16 @@ export default function Calendar({ ctx }) {
             const key = dateKey(year, month, d)
             const evs = events[key] || []
             const isToday = key === todayKey
+            const isSelected = key === selected
             return (
-              <div key={i} className={`cal-cell ${isToday ? 'today' : ''}`}>
+              <div
+                key={i}
+                className={`cal-cell${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${evs.length ? ' has-events' : ''}`}
+                onClick={() => setSelected(key)}
+              >
                 <div className="cal-day-num">{d}</div>
                 <div className="cal-events">
-                  {evs.slice(0, 3).map((e, j) => {
-                    let tone = 'ok'
-                    if (e.kind === 'sample') tone = 'sample'
-                    else if (e.done) tone = 'dispatched'
-                    else {
-                      const dl = daysFromToday(e.date)
-                      if (dl < 0) tone = 'danger'
-                      else if (dl <= 7) tone = 'warn'
-                    }
-                    return (
-                      <div key={j} className={`cal-ev ev-${tone}`}>
-                        <span className="cal-ev-label">{e.kind === 'sample' ? '✂' : '◈'} {e.label}</span>
-                        <span className="cal-ev-sub">{e.sub}</span>
-                      </div>
-                    )
-                  })}
+                  {evs.slice(0, 3).map((e, j) => renderEvent(e, j, true))}
                   {evs.length > 3 && <div className="cal-more">+{evs.length - 3} more</div>}
                 </div>
               </div>
@@ -160,6 +182,53 @@ export default function Calendar({ ctx }) {
           })}
         </div>
       </Card>
+
+      {selected && (
+        <Card>
+          <div className="cal-day-head">
+            <div>
+              <div className="cal-day-title">{fmtDate(selected)}</div>
+              {selectedDeliveries.length > 0 && (
+                <div className="cal-day-sub">
+                  {selectedDeliveries.length} delivery{selectedDeliveries.length === 1 ? '' : 's'}
+                  {selectedValue > 0 && <> · open value {fmtMoney(selectedValue)}</>}
+                </div>
+              )}
+            </div>
+            <Btn tone="ghost" onClick={() => setSelected(null)}>✕ Close</Btn>
+          </div>
+          {selectedEvents.length === 0 ? (
+            <Empty>No deliveries or samples scheduled on this day.</Empty>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Detail</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedEvents.map((e, i) => (
+                  <tr key={i} className="row-click" onClick={() => openEvent(e)}>
+                    <td className="strong">
+                      {e.kind === 'sample' ? '✂ Sample' : '◈ Delivery'} — {e.label}
+                    </td>
+                    <td>{e.sub}</td>
+                    <td>
+                      {e.kind === 'sample'
+                        ? 'Sampling'
+                        : e.done
+                          ? 'Dispatched'
+                          : <DueBadge dateStr={e.date} />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
 
       <Card title={`Deliveries in ${MONTHS[month]} ${year}`}>
         {monthDeliveries.length === 0 ? (
